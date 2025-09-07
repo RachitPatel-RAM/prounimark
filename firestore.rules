@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.role == 'admin' || 
+              request.auth.uid == 'admin');
+    }
+    
+    function isFaculty() {
+      return isAuthenticated() && 
+             (request.auth.token.role == 'faculty' || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty');
+    }
+    
+    function isStudent() {
+      return isAuthenticated() && 
+             (request.auth.token.role == 'student' || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student');
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidEmail() {
+      return request.auth.token.email.matches('.*@darshan\\.ac\\.in$');
+    }
+    
+    // Server seeds - DENY ALL CLIENT ACCESS
+    match /server_seeds/{userId} {
+      allow read, write: if false;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Admin can read/write all users
+      allow read, write: if isAdmin();
+      
+      // Users can read their own data
+      allow read: if isOwner(userId);
+      
+      // Faculty can read student data for their sessions
+      allow read: if isFaculty() && 
+                     (getUserRole() == 'faculty' || 
+                      resource.data.role == 'student');
+      
+      // Students can only read their own data
+      allow read: if isStudent() && isOwner(userId);
+      
+      // Only Cloud Functions can create/update users
+      allow create, update: if false;
+    }
+    
+    // Branches collection
+    match /branches/{branchId} {
+      // Admin can read/write all branches
+      allow read, write: if isAdmin();
+      
+      // Faculty and students can read active branches
+      allow read: if isAuthenticated() && 
+                     (isFaculty() || isStudent()) && 
+                     resource.data.isActive == true;
+    }
+    
+    // Classes collection
+    match /classes/{classId} {
+      // Admin can read/write all classes
+      allow read, write: if isAdmin();
+      
+      // Faculty and students can read active classes
+      allow read: if isAuthenticated() && 
+                     (isFaculty() || isStudent()) && 
+                     resource.data.isActive == true;
+    }
+    
+    // Batches collection
+    match /batches/{batchId} {
+      // Admin can read/write all batches
+      allow read, write: if isAdmin();
+      
+      // Faculty and students can read active batches
+      allow read: if isAuthenticated() && 
+                     (isFaculty() || isStudent()) && 
+                     resource.data.isActive == true;
+    }
+    
+    // Sessions collection
+    match /sessions/{sessionId} {
+      // Admin can read/write all sessions
+      allow read, write: if isAdmin();
+      
+      // Faculty can read/write their own sessions
+      allow read, write: if isFaculty() && 
+                            resource.data.facultyId == request.auth.uid;
+      
+      // Students can read active sessions they're eligible for
+      allow read: if isStudent() && 
+                     resource.data.status == 'open' &&
+                     resource.data.expiresAt > request.time &&
+                     resource.data.branchId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch &&
+                     resource.data.classId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.classId &&
+                     resource.data.batchIds.hasAny([get(/databases/$(database)/documents/users/$(request.auth.uid)).data.batchId]);
+      
+      // Only Cloud Functions can create sessions
+      allow create: if false;
+      
+      // Faculty can update their own sessions (limited fields)
+      allow update: if isFaculty() && 
+                       resource.data.facultyId == request.auth.uid &&
+                       // Only allow updating specific fields
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'stats', 'updatedAt']);
+      
+      // Attendance subcollection
+      match /attendance/{studentId} {
+        // DENY ALL CLIENT ACCESS - Only Cloud Functions can write attendance
+        allow read, write: if false;
+        
+        // Students can read their own attendance
+        allow read: if isStudent() && isOwner(studentId);
+        
+        // Faculty can read attendance for their sessions
+        allow read: if isFaculty() && 
+                       get(/databases/$(database)/documents/sessions/$(sessionId)).data.facultyId == request.auth.uid;
+        
+        // Admin can read all attendance
+        allow read: if isAdmin();
+      }
+    }
+    
+    // Audit logs - Admin only
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions can write audit logs
+    }
+    
+    // System configuration - Admin only
+    match /system/{configId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Rate limiting collection - No client access
+    match /rateLimits/{limitId} {
+      allow read, write: if false;
+    }
+    
+    // Device bindings - No client access
+    match /deviceBindings/{bindingId} {
+      allow read, write: if false;
+    }
+    
+    // Session codes - No client access
+    match /sessionCodes/{codeId} {
+      allow read, write: if false;
+    }
+    
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

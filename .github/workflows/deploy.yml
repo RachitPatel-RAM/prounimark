@@ -1,0 +1,213 @@
+name: Deploy UniMark
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FLUTTER_VERSION: '3.6.0'
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: functions/package-lock.json
+        
+    - name: Install Flutter dependencies
+      run: flutter pub get
+      
+    - name: Install Cloud Functions dependencies
+      run: |
+        cd functions
+        npm ci
+        
+    - name: Run Flutter tests
+      run: flutter test
+      
+    - name: Run Cloud Functions tests
+      run: |
+        cd functions
+        npm test
+        
+    - name: Analyze Flutter code
+      run: flutter analyze
+      
+    - name: Check Flutter formatting
+      run: dart format --output=none --set-exit-if-changed .
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: functions/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        flutter pub get
+        cd functions && npm ci
+        
+    - name: Build Cloud Functions
+      run: |
+        cd functions
+        npm run build
+        
+    - name: Build Android APK
+      run: flutter build apk --release
+      
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
+      
+    - name: Authenticate to Firebase
+      run: echo "${{ secrets.FIREBASE_TOKEN }}" | firebase login:ci
+      
+    - name: Deploy to Firebase Staging
+      run: |
+        firebase use staging
+        firebase deploy --only functions,firestore:rules,firestore:indexes --project staging
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
+      
+    - name: Authenticate to Firebase
+      run: echo "${{ secrets.FIREBASE_TOKEN }}" | firebase login:ci
+      
+    - name: Deploy to Firebase Production
+      run: |
+        firebase use production
+        firebase deploy --only functions,firestore:rules,firestore:indexes --project production
+        
+    - name: Setup App Check
+      run: |
+        firebase appcheck:apps:register android com.example.unimark --project production
+        firebase appcheck:apps:register ios com.example.unimark --project production
+        
+    - name: Configure Cloud Functions
+      run: |
+        firebase functions:config:set admin.id="ADMIN404" admin.password="ADMIN9090@@@@" --project production
+        firebase functions:config:set university.domain="@darshan.ac.in" university.name="Darshan University" --project production
+        firebase functions:config:set security.default_radius="500" security.default_ttl="300" security.edit_window="172800" --project production
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  performance-test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd functions
+        npm ci
+        
+    - name: Run performance tests
+      run: |
+        cd functions
+        npm run test:performance
+        
+    - name: Generate performance report
+      run: |
+        echo "Performance test results would be generated here"
+        # Add actual performance testing logic

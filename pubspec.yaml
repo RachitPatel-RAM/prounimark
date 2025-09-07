@@ -1,0 +1,78 @@
+name: unimark
+description: UniMark - Secure Attendance Management System
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Core UI and responsive design
+  sizer: ^2.0.15
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+  shared_preferences: ^2.2.2
+  web: ^1.1.1
+  
+  # Feature dependencies
+  cached_network_image: ^3.3.1
+  connectivity_plus: ^6.1.4
+  dio: ^5.4.0
+  fluttertoast: ^8.2.4
+  fl_chart: ^0.65.0
+  google_maps_flutter: ^2.5.3
+  permission_handler: ^11.1.0
+  flutter_slidable: ^4.0.1
+  image_picker: ^1.0.4
+  
+  # Firebase dependencies
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+  firebase_messaging: ^14.7.10
+  # firebase_functions: ^0.0.1-dev  # Discontinued - using HTTP calls instead
+  firebase_app_check: ^0.2.1+18
+  
+  # Authentication & Security
+  google_sign_in: ^6.2.1
+  local_auth: ^2.1.7
+  flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.3
+  
+  # Location & Device
+  geolocator: ^13.0.4
+  device_info_plus: ^9.1.1
+  package_info_plus: ^8.0.2
+  
+  # Additional utilities
+  uuid: ^4.2.1
+  intl: ^0.19.0
+  http: ^1.2.1
+  json_annotation: ^4.9.0
+  equatable: ^2.0.5
+  rxdart: ^0.27.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.9
+  mockito: ^5.4.4
+
+flutter:
+  uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE
+  assets:
+    - assets/
+    - assets/images/
+  # CRITICAL ASSET MANAGEMENT RULES:
+  # - DO NOT ADD NEW ASSET DIRECTORIES (assets/svg/, assets/icons/, etc.)
+  # - ONLY USE EXISTING AND ITEMS AVAILABLE IN THE DIRECTORIES LISTED ABOVE (assets/, assets/images/)
+  
+  # CRITICAL FONTS RULE: 
+  # - THIS PROJECT USES GOOGLE FONTS INSTEAD OF LOCAL FONTS
+  # - DO NOT ADD ANY LOCAL FONTS SECTION OR FONT FILES
