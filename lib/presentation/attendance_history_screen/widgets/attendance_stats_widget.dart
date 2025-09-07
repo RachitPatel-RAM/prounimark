@@ -14,242 +14,142 @@ class AttendanceStatsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Attendance Statistics',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimaryLight,
-          ),
-        ),
-        
-        SizedBox(height: 3.h),
-        
-        // Overall Stats
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Attendance Statistics',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryLight,
+              ),
+            ),
+            
+            SizedBox(height: 3.h),
+            
+            // Overall Stats
+            _buildStatsRow(
+              context,
+              'Overall Attendance',
+              '${stats['percentage']}%',
+              '${stats['present']}/${stats['total']}',
+              AppTheme.primaryLight,
+            ),
+            
+            SizedBox(height: 2.h),
+            
+            // Filtered Stats (if different from overall)
+            if (filteredStats['total'] != stats['total'])
+              Column(
+                children: [
+                  _buildStatsRow(
+                    context,
+                    'Filtered Attendance',
+                    '${filteredStats['percentage']}%',
+                    '${filteredStats['present']}/${filteredStats['total']}',
+                    AppTheme.secondaryLight,
+                  ),
+                  SizedBox(height: 2.h),
+                ],
+              ),
+            
+            // Detailed Breakdown
+            Row(
               children: [
-                Text(
-                  'Overall Performance',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimaryLight,
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Present',
+                    stats['present'].toString(),
+                    Colors.green,
+                    Icons.check_circle,
                   ),
                 ),
-                
-                SizedBox(height: 3.h),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Total Classes',
-                        stats['total'].toString(),
-                        Icons.school,
-                        AppTheme.primaryLight,
-                      ),
-                    ),
-                    SizedBox(width: 2.w),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Present',
-                        stats['present'].toString(),
-                        Icons.check_circle,
-                        AppTheme.successLight,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                SizedBox(height: 2.h),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Absent',
-                        stats['absent'].toString(),
-                        Icons.cancel,
-                        AppTheme.errorLight,
-                      ),
-                    ),
-                    SizedBox(width: 2.w),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        'Late',
-                        stats['late'].toString(),
-                        Icons.schedule,
-                        AppTheme.warningLight,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                SizedBox(height: 3.h),
-                
-                // Attendance Percentage
-                Container(
-                  padding: EdgeInsets.all(3.w),
-                  decoration: BoxDecoration(
-                    color: _getPercentageColor(stats['percentage']).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _getPercentageColor(stats['percentage']).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.percent,
-                        color: _getPercentageColor(stats['percentage']),
-                        size: 24.sp,
-                      ),
-                      SizedBox(width: 3.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Attendance Percentage',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondaryLight,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '${stats['percentage']}%',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: _getPercentageColor(stats['percentage']),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    'Absent',
+                    stats['absent'].toString(),
+                    Colors.red,
+                    Icons.cancel,
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
-        
-        // Filtered Stats (if filters are applied)
-        if (_hasFiltersApplied()) ...[
-          SizedBox(height: 3.h),
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(4.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.filter_list,
-                        color: AppTheme.primaryLight,
-                        size: 20.sp,
-                      ),
-                      SizedBox(width: 2.w),
-                      Text(
-                        'Filtered Results',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 3.h),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          'Total',
-                          filteredStats['total'].toString(),
-                          Icons.school,
-                          AppTheme.primaryLight,
-                        ),
-                      ),
-                      SizedBox(width: 2.w),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          'Present',
-                          filteredStats['present'].toString(),
-                          Icons.check_circle,
-                          AppTheme.successLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 2.h),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          'Absent',
-                          filteredStats['absent'].toString(),
-                          Icons.cancel,
-                          AppTheme.errorLight,
-                        ),
-                      ),
-                      SizedBox(width: 2.w),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          'Late',
-                          filteredStats['late'].toString(),
-                          Icons.schedule,
-                          AppTheme.warningLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  Widget _buildStatCard(
+  Widget _buildStatsRow(
     BuildContext context,
     String title,
-    String value,
-    IconData icon,
+    String percentage,
+    String count,
     Color color,
   ) {
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimaryLight,
+                ),
+              ),
+              SizedBox(height: 0.5.h),
+              Text(
+                count,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondaryLight,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            percentage,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String count,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
@@ -257,14 +157,14 @@ class AttendanceStatsWidget extends StatelessWidget {
           Icon(
             icon,
             color: color,
-            size: 24.sp,
+            size: 6.w,
           ),
           SizedBox(height: 1.h),
           Text(
-            value,
+            count,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: color,
               fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
           SizedBox(height: 0.5.h),
@@ -272,22 +172,10 @@ class AttendanceStatsWidget extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: AppTheme.textSecondaryLight,
-              fontWeight: FontWeight.w500,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
-  }
-
-  Color _getPercentageColor(int percentage) {
-    if (percentage >= 90) return AppTheme.successLight;
-    if (percentage >= 75) return AppTheme.warningLight;
-    return AppTheme.errorLight;
-  }
-
-  bool _hasFiltersApplied() {
-    return filteredStats['total'] != stats['total'];
   }
 }

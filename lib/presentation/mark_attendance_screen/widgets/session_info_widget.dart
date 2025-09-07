@@ -14,12 +14,23 @@ class SessionInfoWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Padding(
+      child: Container(
         padding: EdgeInsets.all(4.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              AppTheme.primaryLight,
+              AppTheme.primaryLight.withOpacity(0.8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -27,83 +38,34 @@ class SessionInfoWidget extends StatelessWidget {
               children: [
                 Icon(
                   Icons.school,
-                  color: AppTheme.primaryLight,
-                  size: 24.sp,
+                  color: Colors.white,
+                  size: 6.w,
                 ),
-                SizedBox(width: 3.w),
+                SizedBox(width: 2.w),
                 Expanded(
                   child: Text(
-                    'Session Information',
+                    session.subject,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimaryLight,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
                   decoration: BoxDecoration(
-                    color: session.isActive 
-                        ? AppTheme.successLight.withOpacity(0.1)
-                        : AppTheme.errorLight.withOpacity(0.1),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    session.isActive ? 'Active' : 'Ended',
+                    session.status.toString().split('.').last.toUpperCase(),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: session.isActive 
-                          ? AppTheme.successLight
-                          : AppTheme.errorLight,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
-            ),
-            
-            SizedBox(height: 3.h),
-            
-            _buildInfoRow(
-              context,
-              Icons.person,
-              'Faculty',
-              session.facultyName,
-            ),
-            
-            SizedBox(height: 2.h),
-            
-            _buildInfoRow(
-              context,
-              Icons.book,
-              'Subject',
-              session.subject,
-            ),
-            
-            SizedBox(height: 2.h),
-            
-            _buildInfoRow(
-              context,
-              Icons.location_on,
-              'Branch',
-              session.branch,
-            ),
-            
-            SizedBox(height: 2.h),
-            
-            _buildInfoRow(
-              context,
-              Icons.class_,
-              'Class',
-              session.className,
-            ),
-            
-            SizedBox(height: 2.h),
-            
-            _buildInfoRow(
-              context,
-              Icons.group,
-              'Batches',
-              session.batches.join(', '),
             ),
             
             SizedBox(height: 2.h),
@@ -111,62 +73,96 @@ class SessionInfoWidget extends StatelessWidget {
             _buildInfoRow(
               context,
               Icons.access_time,
-              'Started',
-              _formatDateTime(session.startTime),
+              'Session Time',
+              '${_formatTime(session.startAt)} - ${_formatTime(session.expiresAt)}',
             ),
             
-            if (session.endTime != null) ...[
-              SizedBox(height: 2.h),
-              _buildInfoRow(
-                context,
-                Icons.access_time_filled,
-                'Ended',
-                _formatDateTime(session.endTime!),
+            SizedBox(height: 1.h),
+            
+            _buildInfoRow(
+              context,
+              Icons.location_on,
+              'Location',
+              'Lat: ${session.facultyLocation.lat.toStringAsFixed(4)}, Lng: ${session.facultyLocation.lng.toStringAsFixed(4)}',
+            ),
+            
+            SizedBox(height: 1.h),
+            
+            _buildInfoRow(
+              context,
+              Icons.radio_button_checked,
+              'GPS Radius',
+              '${session.gpsRadiusM}m',
+            ),
+            
+            SizedBox(height: 2.h),
+            
+            // Session Code (for faculty reference)
+            Container(
+              padding: EdgeInsets.all(3.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.security,
+                    color: Colors.white,
+                    size: 5.w,
+                  ),
+                  SizedBox(width: 2.w),
+                  Text(
+                    'Session Code: ${session.code.toString().padLeft(3, '0')}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
           icon,
-          color: AppTheme.textSecondaryLight,
-          size: 18.sp,
+          color: Colors.white.withOpacity(0.8),
+          size: 4.w,
         ),
-        SizedBox(width: 3.w),
+        SizedBox(width: 2.w),
+        Text(
+          '$label: ',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.white.withOpacity(0.8),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondaryLight,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 0.5.h),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textPrimaryLight,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  String _formatTime(DateTime dateTime) {
+    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

@@ -34,7 +34,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
   // Filter options
   DateTime? _startDate;
   DateTime? _endDate;
-  AttendanceStatus? _statusFilter;
+  AttendanceResult? _statusFilter;
 
   @override
   void initState() {
@@ -74,19 +74,19 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
 
     if (_startDate != null) {
       filtered = filtered.where((attendance) => 
-          attendance.timestamp.isAfter(_startDate!) || 
-          attendance.timestamp.isAtSameMomentAs(_startDate!)).toList();
+          attendance.submittedAt.isAfter(_startDate!) || 
+          attendance.submittedAt.isAtSameMomentAs(_startDate!)).toList();
     }
 
     if (_endDate != null) {
       filtered = filtered.where((attendance) => 
-          attendance.timestamp.isBefore(_endDate!.add(const Duration(days: 1))) || 
-          attendance.timestamp.isAtSameMomentAs(_endDate!)).toList();
+          attendance.submittedAt.isBefore(_endDate!.add(const Duration(days: 1))) || 
+          attendance.submittedAt.isAtSameMomentAs(_endDate!)).toList();
     }
 
     if (_statusFilter != null) {
       filtered = filtered.where((attendance) => 
-          attendance.status == _statusFilter).toList();
+          attendance.result.toString().split('.').last == _statusFilter.toString().split('.').last).toList();
     }
 
     return filtered;
@@ -94,20 +94,19 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
 
   Map<String, dynamic> get _attendanceStats {
     final total = _attendanceHistory.length;
-    final present = _attendanceHistory.where((a) => a.status == AttendanceStatus.present).length;
-    final absent = _attendanceHistory.where((a) => a.status == AttendanceStatus.absent).length;
-    final late = _attendanceHistory.where((a) => a.status == AttendanceStatus.late).length;
+    final present = _attendanceHistory.where((a) => a.result == AttendanceResult.accepted).length;
+    final absent = _attendanceHistory.where((a) => a.result == AttendanceResult.rejected).length;
     
     return {
       'total': total,
       'present': present,
       'absent': absent,
-      'late': late,
+      'late': 0, // Not used in new model
       'percentage': total > 0 ? (present / total * 100).round() : 0,
     };
   }
 
-  void _applyFilters(DateTime? startDate, DateTime? endDate, AttendanceStatus? status) {
+  void _applyFilters(DateTime? startDate, DateTime? endDate, AttendanceResult? status) {
     setState(() {
       _startDate = startDate;
       _endDate = endDate;
@@ -228,15 +227,14 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
   Map<String, dynamic> _getFilteredStats() {
     final filtered = _filteredAttendance;
     final total = filtered.length;
-    final present = filtered.where((a) => a.status == AttendanceStatus.present).length;
-    final absent = filtered.where((a) => a.status == AttendanceStatus.absent).length;
-    final late = filtered.where((a) => a.status == AttendanceStatus.late).length;
+    final present = filtered.where((a) => a.result == AttendanceResult.accepted).length;
+    final absent = filtered.where((a) => a.result == AttendanceResult.rejected).length;
     
     return {
       'total': total,
       'present': present,
       'absent': absent,
-      'late': late,
+      'late': 0, // Not used in new model
       'percentage': total > 0 ? (present / total * 100).round() : 0,
     };
   }

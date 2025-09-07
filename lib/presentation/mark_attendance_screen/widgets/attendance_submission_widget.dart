@@ -18,55 +18,43 @@ class AttendanceSubmissionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool canSubmit = isLocationVerified && isCodeVerified && !isLoading;
-
+    final canSubmit = isLocationVerified && isCodeVerified && !isLoading;
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: EdgeInsets.all(4.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.send,
-                  color: canSubmit ? AppTheme.successLight : AppTheme.textSecondaryLight,
-                  size: 24.sp,
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Text(
-                    'Submit Attendance',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimaryLight,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              'Submit Attendance',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryLight,
+              ),
             ),
             
             SizedBox(height: 3.h),
             
-            // Requirements Checklist
-            _buildRequirementItem(
+            // Verification Checklist
+            _buildChecklistItem(
               context,
               'Location Verified',
               isLocationVerified,
-              Icons.location_on,
+              'Your location is within the required radius',
             ),
             
             SizedBox(height: 2.h),
             
-            _buildRequirementItem(
+            _buildChecklistItem(
               context,
               'Code Verified',
               isCodeVerified,
-              Icons.vpn_key,
+              'Attendance code is correct',
             ),
             
             SizedBox(height: 3.h),
@@ -75,130 +63,134 @@ class AttendanceSubmissionWidget extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 6.h,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: canSubmit ? onSubmit : null,
+                icon: isLoading 
+                    ? SizedBox(
+                        width: 4.w,
+                        height: 4.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(
+                  isLoading 
+                      ? 'Submitting...'
+                      : 'Mark Attendance',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: canSubmit 
-                      ? AppTheme.primaryLight 
-                      : AppTheme.textDisabledLight,
+                      ? AppTheme.primaryLight
+                      : AppTheme.textSecondaryLight,
                   foregroundColor: Colors.white,
-                  elevation: canSubmit ? 4 : 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: canSubmit ? 4 : 0,
                 ),
-                child: isLoading
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20.sp,
-                            height: 20.sp,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          ),
-                          SizedBox(width: 3.w),
-                          Text(
-                            'Submitting...',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        'Mark Attendance',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
               ),
             ),
             
-            if (!canSubmit && !isLoading) ...[
+            if (!canSubmit && !isLoading)
               SizedBox(height: 2.h),
+            
+            if (!canSubmit && !isLoading)
               Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
                   color: AppTheme.warningLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.warningLight.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.warning,
+                      Icons.info_outline,
                       color: AppTheme.warningLight,
-                      size: 18.sp,
+                      size: 5.w,
                     ),
                     SizedBox(width: 2.w),
                     Expanded(
                       child: Text(
                         'Please verify your location and attendance code before submitting.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.warningLight,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRequirementItem(
+  Widget _buildChecklistItem(
     BuildContext context,
     String title,
-    bool isCompleted,
-    IconData icon,
+    bool isVerified,
+    String description,
   ) {
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
-        color: isCompleted 
-            ? AppTheme.successLight.withOpacity(0.1)
+        color: isVerified 
+            ? Colors.green.withOpacity(0.1)
             : AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCompleted 
-              ? AppTheme.successLight.withOpacity(0.3)
+          color: isVerified 
+              ? Colors.green.withOpacity(0.3)
               : AppTheme.dividerLight,
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            isCompleted ? Icons.check_circle : icon,
-            color: isCompleted ? AppTheme.successLight : AppTheme.textSecondaryLight,
-            size: 20.sp,
+          Container(
+            width: 8.w,
+            height: 8.w,
+            decoration: BoxDecoration(
+              color: isVerified ? Colors.green : AppTheme.textSecondaryLight,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isVerified ? Icons.check : Icons.close,
+              color: Colors.white,
+              size: 4.w,
+            ),
           ),
+          
           SizedBox(width: 3.w),
+          
           Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isCompleted 
-                    ? AppTheme.successLight 
-                    : AppTheme.textSecondaryLight,
-                fontWeight: FontWeight.w500,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isVerified ? Colors.green : AppTheme.textPrimaryLight,
+                  ),
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondaryLight,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (isCompleted)
-            Icon(
-              Icons.check,
-              color: AppTheme.successLight,
-              size: 16.sp,
-            ),
         ],
       ),
     );

@@ -28,7 +28,7 @@ class LocationVerificationWidget extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: EdgeInsets.all(4.w),
@@ -39,212 +39,207 @@ class LocationVerificationWidget extends StatelessWidget {
               children: [
                 Icon(
                   Icons.location_on,
-                  color: isLocationVerified ? AppTheme.successLight : AppTheme.errorLight,
-                  size: 24.sp,
+                  color: AppTheme.primaryLight,
+                  size: 6.w,
                 ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Text(
-                    'Location Verification',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimaryLight,
-                    ),
+                SizedBox(width: 2.w),
+                Text(
+                  'Location Verification',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimaryLight,
                   ),
                 ),
-                if (isLoading)
-                  SizedBox(
-                    width: 20.sp,
-                    height: 20.sp,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryLight),
-                    ),
-                  )
-                else
-                  Icon(
-                    isLocationVerified ? Icons.check_circle : Icons.error,
-                    color: isLocationVerified ? AppTheme.successLight : AppTheme.errorLight,
-                    size: 24.sp,
-                  ),
+                const Spacer(),
+                _buildStatusIcon(),
               ],
             ),
             
             SizedBox(height: 3.h),
             
-            if (isLocationVerified) ...[
-              Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: AppTheme.successLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.successLight.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: AppTheme.successLight,
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 2.w),
-                    Expanded(
-                      child: Text(
-                        'Location verified! You are within the allowed radius.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.successLight,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else if (errorMessage.isNotEmpty) ...[
-              Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: AppTheme.errorLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.errorLight.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.error,
-                          color: AppTheme.errorLight,
-                          size: 18.sp,
-                        ),
-                        SizedBox(width: 2.w),
-                        Expanded(
-                          child: Text(
-                            'Location verification failed',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.errorLight,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 1.h),
-                    Text(
-                      errorMessage,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.errorLight,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    ElevatedButton.icon(
-                      onPressed: onRetry,
-                      icon: Icon(Icons.refresh, size: 16.sp),
-                      label: const Text('Retry'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.errorLight,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: AppTheme.warningLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.warningLight.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.location_searching,
-                      color: AppTheme.warningLight,
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 2.w),
-                    Expanded(
-                      child: Text(
-                        'Verifying your location...',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.warningLight,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            if (isLoading)
+              const Center(
+                child: CircularProgressIndicator(),
+              )
+            else if (errorMessage.isNotEmpty)
+              _buildErrorMessage(context)
+            else if (currentLocation != null)
+              _buildLocationInfo(context)
+            else
+              _buildNoLocationInfo(context),
             
-            SizedBox(height: 3.h),
+            SizedBox(height: 2.h),
             
-            // Location Details
-            _buildLocationDetails(context),
+            if (!isLoading && errorMessage.isEmpty)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh Location'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryLight,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationDetails(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Location Details',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimaryLight,
-          ),
+  Widget _buildStatusIcon() {
+    if (isLoading) {
+      return SizedBox(
+        width: 6.w,
+        height: 6.w,
+        child: const CircularProgressIndicator(strokeWidth: 2),
+      );
+    } else if (isLocationVerified) {
+      return Container(
+        padding: EdgeInsets.all(1.w),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
         ),
-        
-        SizedBox(height: 2.h),
-        
-        _buildLocationRow(
-          context,
-          'Session Location',
-          '${sessionLocation.latitude.toStringAsFixed(6)}, ${sessionLocation.longitude.toStringAsFixed(6)}',
+        child: Icon(
+          Icons.check_circle,
+          color: Colors.green,
+          size: 5.w,
         ),
-        
-        if (currentLocation != null) ...[
-          SizedBox(height: 1.h),
-          _buildLocationRow(
-            context,
-            'Your Location',
-            '${currentLocation!.latitude.toStringAsFixed(6)}, ${currentLocation!.longitude.toStringAsFixed(6)}',
+      );
+    } else {
+      return Container(
+        padding: EdgeInsets.all(1.w),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          Icons.cancel,
+          color: Colors.red,
+          size: 5.w,
+        ),
+      );
+    }
+  }
+
+  Widget _buildErrorMessage(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 5.w,
           ),
-          
-          SizedBox(height: 1.h),
-          _buildLocationRow(
-            context,
-            'Distance',
-            currentLocation != null 
-                ? '${sessionLocation.distanceTo(currentLocation!).toStringAsFixed(0)} meters'
-                : 'Calculating...',
+          SizedBox(width: 2.w),
+          Expanded(
+            child: Text(
+              errorMessage,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.red,
+              ),
+            ),
           ),
         ],
-        
-        SizedBox(height: 1.h),
-        _buildLocationRow(
-          context,
-          'Allowed Radius',
-          '$radius meters',
+      ),
+    );
+  }
+
+  Widget _buildLocationInfo(BuildContext context) {
+    final distance = currentLocation!.distanceTo(sessionLocation);
+    final isWithinRadius = distance <= radius;
+    
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(3.w),
+          decoration: BoxDecoration(
+            color: isWithinRadius 
+                ? Colors.green.withOpacity(0.1)
+                : Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isWithinRadius 
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.red.withOpacity(0.3),
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isWithinRadius ? Icons.check_circle : Icons.cancel,
+                    color: isWithinRadius ? Colors.green : Colors.red,
+                    size: 5.w,
+                  ),
+                  SizedBox(width: 2.w),
+                  Expanded(
+                    child: Text(
+                      isWithinRadius 
+                          ? 'You are within the attendance radius'
+                          : 'You are outside the attendance radius',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: isWithinRadius ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: 2.h),
+              
+              _buildLocationDetail(
+                context,
+                'Your Location',
+                '${currentLocation!.lat.toStringAsFixed(4)}, ${currentLocation!.lng.toStringAsFixed(4)}',
+                'Accuracy: ${currentLocation!.accuracyM.toStringAsFixed(1)}m',
+              ),
+              
+              SizedBox(height: 1.h),
+              
+              _buildLocationDetail(
+                context,
+                'Session Location',
+                '${sessionLocation.lat.toStringAsFixed(4)}, ${sessionLocation.lng.toStringAsFixed(4)}',
+                'Radius: ${radius}m',
+              ),
+              
+              SizedBox(height: 1.h),
+              
+              _buildLocationDetail(
+                context,
+                'Distance',
+                '${distance.toStringAsFixed(1)}m',
+                isWithinRadius ? 'Within range' : 'Outside range',
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildLocationRow(BuildContext context, String label, String value) {
+  Widget _buildLocationDetail(
+    BuildContext context,
+    String label,
+    String value,
+    String subtitle,
+  ) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 30.w,
+          width: 25.w,
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -254,15 +249,62 @@ class LocationVerificationWidget extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textPrimaryLight,
-              fontFamily: 'monospace',
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textPrimaryLight,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSecondaryLight,
+                ),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNoLocationInfo(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.dividerLight),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.location_off,
+            color: AppTheme.textSecondaryLight,
+            size: 8.w,
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            'Location not available',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppTheme.textPrimaryLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 1.h),
+          Text(
+            'Please enable location services and try again',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondaryLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

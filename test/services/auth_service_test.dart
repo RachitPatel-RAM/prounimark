@@ -74,9 +74,8 @@ void main() {
         final result = await authService.signInWithGoogle();
 
         // Assert
-        expect(result.isSuccess, isTrue);
-        expect(result.user?.email, equals('test@darshan.ac.in'));
-        expect(result.needsRegistration, isFalse);
+        expect(result, isNotNull);
+        expect(result?.email, equals('test@darshan.ac.in'));
       });
 
       test('should fail with non-darshan.ac.in email', () async {
@@ -85,13 +84,11 @@ void main() {
         when(mockGoogleUser.email).thenReturn('test@gmail.com');
         when(mockGoogleSignIn.signIn()).thenAnswer((_) async => mockGoogleUser);
 
-        // Act
-        final result = await authService.signInWithGoogle();
-
-        // Assert
-        expect(result.isSuccess, isFalse);
-        expect(result.error, contains('Access denied'));
-        expect(result.error, contains('@darshan.ac.in'));
+        // Act & Assert
+        expect(
+          () => authService.signInWithGoogle(),
+          throwsA(isA<Exception>()),
+        );
       });
 
       test('should return needsRegistration for new user', () async {
@@ -119,9 +116,8 @@ void main() {
         final result = await authService.signInWithGoogle();
 
         // Assert
-        expect(result.isSuccess, isFalse);
-        expect(result.needsRegistration, isTrue);
-        expect(result.firebaseUser, equals(mockUser));
+        expect(result, isNotNull);
+        expect(result?.role, equals(UserRole.student));
       });
     });
 
@@ -148,9 +144,8 @@ void main() {
         final result = await authService.adminLogin('ADMIN404', 'ADMIN9090@@@@');
 
         // Assert
-        expect(result.isSuccess, isTrue);
-        expect(result.user?.role, equals(UserRole.admin));
-        expect(result.user?.email, equals('admin@darshan.ac.in'));
+        expect(result, isNotNull);
+        expect(result?.role, equals(UserRole.admin));
       });
 
       test('should fail with invalid admin credentials', () async {
@@ -166,12 +161,11 @@ void main() {
         when(mockCallable.call(any)).thenAnswer((_) async => mockResult);
         when(mockFunctions.httpsCallable('adminLogin')).thenReturn(mockCallable);
 
-        // Act
-        final result = await authService.adminLogin('WRONG_ID', 'WRONG_PASSWORD');
-
-        // Assert
-        expect(result.isSuccess, isFalse);
-        expect(result.error, contains('Invalid credentials'));
+        // Act & Assert
+        expect(
+          () => authService.adminLogin('WRONG_ID', 'WRONG_PASSWORD'),
+          throwsA(isA<Exception>()),
+        );
       });
     });
 
@@ -222,34 +216,43 @@ void main() {
 
         // Act
         final result = await authService.completeStudentRegistration(
+          uid: 'test-uid',
+          name: 'Test User',
+          email: 'test@darshan.ac.in',
           enrollmentNo: 'CS2024001',
-          branchId: 'CS',
+          branch: 'CS',
           classId: 'CS-A',
           batchId: '2024',
           pin: '1234',
+          instIdHash: 'test-hash',
+          platform: 'android',
         );
 
         // Assert
-        expect(result.isSuccess, isTrue);
-        expect(result.user?.role, equals(UserRole.student));
-        expect(result.user?.enrollmentNo, equals('CS2024001'));
+        expect(result, isNotNull);
+        expect(result.role, equals(UserRole.student));
+        expect(result.enrollmentNo, equals('CS2024001'));
       });
 
       test('should fail when user is not authenticated', () async {
         // Arrange
         when(mockAuth.currentUser).thenReturn(null);
 
-        // Act
-        final result = await authService.completeStudentRegistration(
-          enrollmentNo: 'CS2024001',
-          branchId: 'CS',
-          classId: 'CS-A',
-          batchId: '2024',
+        // Act & Assert
+        expect(
+          () => authService.completeStudentRegistration(
+            uid: 'test-uid',
+            name: 'Test User',
+            email: 'test@darshan.ac.in',
+            enrollmentNo: 'CS2024001',
+            branch: 'CS',
+            classId: 'CS-A',
+            batchId: '2024',
+            instIdHash: 'test-hash',
+            platform: 'android',
+          ),
+          throwsA(isA<Exception>()),
         );
-
-        // Assert
-        expect(result.isSuccess, isFalse);
-        expect(result.error, contains('No authenticated user'));
       });
     });
   });

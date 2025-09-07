@@ -1,6 +1,4 @@
 import 'package:local_auth/local_auth.dart';
-import 'package:local_auth_android/local_auth_android.dart';
-import 'package:local_auth_ios/local_auth_ios.dart';
 import 'package:flutter/services.dart';
 
 class BiometricService {
@@ -49,26 +47,9 @@ class BiometricService {
 
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason: reason ?? 'Please authenticate to mark attendance',
-        authMessages: const [
-          AndroidAuthMessages(
-            signInTitle: 'Biometric Authentication',
-            cancelButton: 'Cancel',
-            deviceCredentialsRequiredTitle: 'Device Credentials Required',
-            deviceCredentialsSetupDescription: 'Device credentials are not set up on your device. Go to \'Settings > Security\' to set up a screen lock.',
-            goToSettingsButton: 'Go to Settings',
-            goToSettingsDescription: 'Please set up a screen lock in your device settings.',
-          ),
-          IOSAuthMessages(
-            cancelButton: 'Cancel',
-            goToSettingsButton: 'Go to Settings',
-            goToSettingsDescription: 'Please set up Touch ID or Face ID on your device to use biometric authentication.',
-            lockOut: 'Please reenable your Touch ID or Face ID',
-          ),
-        ],
         options: AuthenticationOptions(
           stickyAuth: stickyAuth,
-          biometricOnly: false,
-          sensitiveTransaction: true,
+          biometricOnly: true,
         ),
       );
 

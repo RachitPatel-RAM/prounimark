@@ -7,6 +7,7 @@ import '../../models/session_model.dart';
 import '../../models/attendance_model.dart';
 import '../../models/user_model.dart';
 import '../../services/firebase_service.dart';
+import '../../services/attendance_service.dart';
 import 'widgets/attendance_code_input_widget.dart';
 import 'widgets/location_verification_widget.dart';
 import 'widgets/session_info_widget.dart';
@@ -105,17 +106,18 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     if (_currentPosition == null) return false;
     
     final studentLocation = LocationData(
-      latitude: position.latitude,
-      longitude: position.longitude,
+      lat: position.latitude,
+      lng: position.longitude,
+      accuracyM: position.accuracy,
     );
     
-    final distance = studentLocation.distanceTo(widget.session.location);
-    return distance <= widget.session.radius;
+    final distance = studentLocation.distanceTo(widget.session.facultyLocation);
+    return distance <= widget.session.gpsRadiusM;
   }
 
   void _verifyCode(String code) {
     setState(() {
-      _isCodeVerified = code == widget.session.code;
+      _isCodeVerified = code == widget.session.code.toString().padLeft(3, '0');
       if (!_isCodeVerified) {
         _errorMessage = 'Invalid attendance code. Please check with your faculty.';
       } else {
@@ -157,20 +159,45 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
       // Create attendance record
       final attendance = AttendanceModel(
-        id: widget.currentUser.id,
         sessionId: widget.session.id,
-        studentId: widget.currentUser.id,
-        studentName: widget.currentUser.name,
-        enrollmentNumber: widget.currentUser.enrollmentNumber ?? '',
-        status: AttendanceStatus.present,
-        timestamp: DateTime.now(),
+        studentUid: widget.currentUser.id,
+        enrollmentNo: widget.currentUser.enrollmentNo ?? widget.currentUser.enrollmentNumber ?? '',
+        submittedAt: DateTime.now(),
+        responseCode: int.parse(_codeController.text),
+        deviceInstIdHash: 'test-hash', // This should be generated from device info
         location: LocationData(
-          latitude: _currentPosition!.latitude,
-          longitude: _currentPosition!.longitude,
+          lat: _currentPosition!.latitude,
+          lng: _currentPosition!.longitude,
+          accuracyM: _currentPosition!.accuracy,
         ),
+        verified: VerifiedFlags(
+          timeOk: true,
+          codeOk: _isCodeVerified,
+          deviceOk: true,
+          integrityOk: true,
+          locationOk: _isLocationVerified,
+          biometricOk: true,
+          pinOk: false,
+        ),
+        result: AttendanceResult.accepted,
       );
 
-      await _firebaseService.markAttendance(attendance);
+      // Use attendance service for submission
+      final attendanceService = AttendanceService();
+      final result = await attendanceService.submitAttendance(
+        sessionId: widget.session.id,
+        studentUid: widget.currentUser.id,
+        responseCode: int.parse(_codeController.text),
+        deviceInstIdHash: 'test-hash',
+        platform: 'android',
+        studentLocation: LocationData(
+          lat: _currentPosition!.latitude,
+          lng: _currentPosition!.longitude,
+          accuracyM: _currentPosition!.accuracy,
+        ),
+        playIntegrityToken: 'test-token',
+        appCheckToken: 'test-token',
+      );
 
       Fluttertoast.showToast(
         msg: 'Attendance marked successfully!',
@@ -223,14 +250,15 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 isLoading: _isLoading,
                 errorMessage: _errorMessage,
                 onRetry: _getCurrentLocation,
-                sessionLocation: widget.session.location,
+                sessionLocation: widget.session.facultyLocation,
                 currentLocation: _currentPosition != null 
                     ? LocationData(
-                        latitude: _currentPosition!.latitude,
-                        longitude: _currentPosition!.longitude,
+                        lat: _currentPosition!.latitude,
+                        lng: _currentPosition!.longitude,
+                        accuracyM: _currentPosition!.accuracy,
                       )
                     : null,
-                radius: widget.session.radius,
+                radius: widget.session.gpsRadiusM,
               ),
               
               SizedBox(height: 4.h),

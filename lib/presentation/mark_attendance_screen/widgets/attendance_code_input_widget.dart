@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
 
@@ -20,7 +19,7 @@ class AttendanceCodeInputWidget extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: EdgeInsets.all(4.w),
@@ -30,25 +29,33 @@ class AttendanceCodeInputWidget extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.vpn_key,
-                  color: isCodeVerified ? AppTheme.successLight : AppTheme.primaryLight,
-                  size: 24.sp,
+                  Icons.security,
+                  color: AppTheme.primaryLight,
+                  size: 6.w,
                 ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Text(
-                    'Attendance Code',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimaryLight,
-                    ),
+                SizedBox(width: 2.w),
+                Text(
+                  'Attendance Code',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimaryLight,
                   ),
                 ),
-                if (isCodeVerified)
-                  Icon(
-                    Icons.check_circle,
-                    color: AppTheme.successLight,
-                    size: 24.sp,
+                const Spacer(),
+                if (controller.text.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.all(1.w),
+                    decoration: BoxDecoration(
+                      color: isCodeVerified 
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      isCodeVerified ? Icons.check_circle : Icons.cancel,
+                      color: isCodeVerified ? Colors.green : Colors.red,
+                      size: 5.w,
+                    ),
                   ),
               ],
             ),
@@ -56,7 +63,7 @@ class AttendanceCodeInputWidget extends StatelessWidget {
             SizedBox(height: 3.h),
             
             Text(
-              'Enter the 3-digit attendance code provided by your faculty:',
+              'Enter the 3-digit attendance code provided by your faculty',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.textSecondaryLight,
               ),
@@ -64,32 +71,29 @@ class AttendanceCodeInputWidget extends StatelessWidget {
             
             SizedBox(height: 2.h),
             
-            TextFormField(
+            TextField(
               controller: controller,
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(3),
-              ],
+              maxLength: 3,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontFamily: 'monospace',
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
               ),
               decoration: InputDecoration(
                 hintText: '000',
                 hintStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontFamily: 'monospace',
-                  color: AppTheme.textDisabledLight,
+                  color: AppTheme.textSecondaryLight,
                   letterSpacing: 2,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
                     color: isCodeVerified 
-                        ? AppTheme.successLight 
-                        : AppTheme.dividerLight,
+                        ? Colors.green
+                        : controller.text.isNotEmpty 
+                            ? Colors.red
+                            : AppTheme.dividerLight,
                     width: 2,
                   ),
                 ),
@@ -97,33 +101,31 @@ class AttendanceCodeInputWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
                     color: isCodeVerified 
-                        ? AppTheme.successLight 
-                        : AppTheme.dividerLight,
+                        ? Colors.green
+                        : controller.text.isNotEmpty 
+                            ? Colors.red
+                            : AppTheme.dividerLight,
                     width: 2,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: isCodeVerified 
-                        ? AppTheme.successLight 
-                        : AppTheme.primaryLight,
-                    width: 3,
+                    color: AppTheme.primaryLight,
+                    width: 2,
                   ),
                 ),
                 filled: true,
-                fillColor: isCodeVerified 
-                    ? AppTheme.successLight.withOpacity(0.05)
-                    : AppTheme.backgroundLight,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 4.w,
-                  vertical: 3.h,
+                fillColor: AppTheme.surfaceLight,
+                counterText: '',
+                prefixIcon: Icon(
+                  Icons.lock,
+                  color: AppTheme.primaryLight,
                 ),
-                suffixIcon: isCodeVerified
+                suffixIcon: controller.text.isNotEmpty
                     ? Icon(
-                        Icons.check_circle,
-                        color: AppTheme.successLight,
-                        size: 24.sp,
+                        isCodeVerified ? Icons.check : Icons.close,
+                        color: isCodeVerified ? Colors.green : Colors.red,
                       )
                     : null,
               ),
@@ -132,92 +134,62 @@ class AttendanceCodeInputWidget extends StatelessWidget {
             
             SizedBox(height: 2.h),
             
-            if (isCodeVerified) ...[
+            if (controller.text.isNotEmpty && !isCodeVerified)
               Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
-                  color: AppTheme.successLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.successLight.withOpacity(0.3)),
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 5.w,
+                    ),
+                    SizedBox(width: 2.w),
+                    Expanded(
+                      child: Text(
+                        'Invalid attendance code. Please check with your faculty.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
+            if (isCodeVerified)
+              Container(
+                padding: EdgeInsets.all(3.w),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.check_circle,
-                      color: AppTheme.successLight,
-                      size: 18.sp,
+                      color: Colors.green,
+                      size: 5.w,
                     ),
                     SizedBox(width: 2.w),
                     Expanded(
                       child: Text(
-                        'Code verified successfully!',
+                        'Attendance code verified successfully!',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.successLight,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ] else if (controller.text.isNotEmpty && !isCodeVerified) ...[
-              Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: AppTheme.errorLight.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.errorLight.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error,
-                      color: AppTheme.errorLight,
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 2.w),
-                    Expanded(
-                      child: Text(
-                        'Invalid code. Please check with your faculty.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.errorLight,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            
-            SizedBox(height: 2.h),
-            
-            Container(
-              padding: EdgeInsets.all(3.w),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceLight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.dividerLight),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppTheme.primaryLight,
-                    size: 18.sp,
-                  ),
-                  SizedBox(width: 2.w),
-                  Expanded(
-                    child: Text(
-                      'The attendance code is displayed on the faculty\'s device during the session.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondaryLight,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

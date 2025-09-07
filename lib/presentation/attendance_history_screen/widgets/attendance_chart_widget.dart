@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import '../../../core/app_export.dart';
 import '../../../models/attendance_model.dart';
 
@@ -17,240 +15,183 @@ class AttendanceChartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (attendanceHistory.isEmpty) {
-      return Center(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.bar_chart,
-              size: 64.sp,
-              color: AppTheme.textSecondaryLight,
-            ),
-            SizedBox(height: 2.h),
             Text(
-              'No data available for charts',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textSecondaryLight,
+              'Attendance Trends',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimaryLight,
               ),
             ),
+            
+            SizedBox(height: 3.h),
+            
+            // Weekly Chart Placeholder
+            Container(
+              height: 20.h,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.dividerLight),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bar_chart,
+                      size: 8.w,
+                      color: AppTheme.textSecondaryLight,
+                    ),
+                    SizedBox(height: 1.h),
+                    Text(
+                      'Chart visualization will be implemented\nwith fl_chart package',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondaryLight,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            SizedBox(height: 3.h),
+            
+            // Monthly Stats
+            _buildMonthlyStats(context),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildMonthlyStats(BuildContext context) {
+    final monthlyStats = _calculateMonthlyStats();
+    
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Pie Chart
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Attendance Distribution',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimaryLight,
-                  ),
-                ),
-                SizedBox(height: 3.h),
-                SizedBox(
-                  height: 40.h,
-                  child: PieChart(
-                    PieChartData(
-                      sections: _getPieChartSections(context),
-                      centerSpaceRadius: 40,
-                      sectionsSpace: 2,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                _buildLegend(context),
-              ],
-            ),
+        Text(
+          'Monthly Breakdown',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimaryLight,
           ),
         ),
         
-        SizedBox(height: 4.h),
+        SizedBox(height: 2.h),
         
-        // Weekly Bar Chart
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ...monthlyStats.entries.map((entry) {
+          final month = entry.key;
+          final stats = entry.value;
+          final percentage = stats['total'] > 0 
+              ? (stats['present'] / stats['total'] * 100).round() 
+              : 0;
+          
+          return Container(
+            margin: EdgeInsets.only(bottom: 2.h),
+            padding: EdgeInsets.all(3.w),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.dividerLight),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Weekly Attendance Trend',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimaryLight,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      month,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    SizedBox(height: 0.5.h),
+                    Text(
+                      '${stats['present']}/${stats['total']} sessions',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 3.h),
-                SizedBox(
-                  height: 30.h,
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      maxY: 7,
-                      barTouchData: BarTouchData(enabled: false),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                              if (value.toInt() >= 0 && value.toInt() < days.length) {
-                                return Text(
-                                  days[value.toInt()],
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textSecondaryLight,
-                                  ),
-                                );
-                              }
-                              return const Text('');
-                            },
-                          ),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondaryLight,
-                                ),
-                              );
-                            },
+                
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$percentage%',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: _getPercentageColor(percentage),
+                      ),
+                    ),
+                    SizedBox(height: 0.5.h),
+                    Container(
+                      width: 20.w,
+                      height: 1.h,
+                      decoration: BoxDecoration(
+                        color: AppTheme.dividerLight,
+                        borderRadius: BorderRadius.circular(0.5.h),
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: percentage / 100,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _getPercentageColor(percentage),
+                            borderRadius: BorderRadius.circular(0.5.h),
                           ),
                         ),
                       ),
-                      borderData: FlBorderData(show: false),
-                      barGroups: _getWeeklyBarGroups(),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-          ),
-        ),
+          );
+        }).toList(),
       ],
     );
   }
 
-  List<PieChartSectionData> _getPieChartSections(BuildContext context) {
-    final present = attendanceHistory.where((a) => a.status == AttendanceStatus.present).length;
-    final absent = attendanceHistory.where((a) => a.status == AttendanceStatus.absent).length;
-    final late = attendanceHistory.where((a) => a.status == AttendanceStatus.late).length;
-    final total = attendanceHistory.length;
-
-    if (total == 0) return [];
-
-    return [
-      PieChartSectionData(
-        color: AppTheme.successLight,
-        value: present.toDouble(),
-        title: '${(present / total * 100).round()}%',
-        radius: 50,
-        titleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      PieChartSectionData(
-        color: AppTheme.errorLight,
-        value: absent.toDouble(),
-        title: '${(absent / total * 100).round()}%',
-        radius: 50,
-        titleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      PieChartSectionData(
-        color: AppTheme.warningLight,
-        value: late.toDouble(),
-        title: '${(late / total * 100).round()}%',
-        radius: 50,
-        titleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ];
-  }
-
-  Widget _buildLegend(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildLegendItem(context, 'Present', AppTheme.successLight, Icons.check_circle),
-        _buildLegendItem(context, 'Absent', AppTheme.errorLight, Icons.cancel),
-        _buildLegendItem(context, 'Late', AppTheme.warningLight, Icons.schedule),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(BuildContext context, String label, Color color, IconData icon) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 16.sp),
-        SizedBox(width: 1.w),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondaryLight,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<BarChartGroupData> _getWeeklyBarGroups() {
-    // Group attendance by day of week
-    final weeklyData = List.generate(7, (index) => 0);
+  Map<String, Map<String, int>> _calculateMonthlyStats() {
+    final Map<String, Map<String, int>> monthlyStats = {};
     
-    for (final attendance in attendanceHistory) {
-      final dayOfWeek = attendance.timestamp.weekday - 1; // Monday = 0
-      if (attendance.status == AttendanceStatus.present) {
-        weeklyData[dayOfWeek]++;
+    for (final attendance in filteredAttendance) {
+      final monthKey = '${attendance.submittedAt.month}/${attendance.submittedAt.year}';
+      
+      if (!monthlyStats.containsKey(monthKey)) {
+        monthlyStats[monthKey] = {'present': 0, 'total': 0};
+      }
+      
+      monthlyStats[monthKey]!['total'] = monthlyStats[monthKey]!['total']! + 1;
+      
+      if (attendance.result == AttendanceResult.accepted) {
+        monthlyStats[monthKey]!['present'] = monthlyStats[monthKey]!['present']! + 1;
       }
     }
+    
+    return monthlyStats;
+  }
 
-    return weeklyData.asMap().entries.map((entry) {
-      return BarChartGroupData(
-        x: entry.key,
-        barRods: [
-          BarChartRodData(
-            toY: entry.value.toDouble(),
-            color: AppTheme.primaryLight,
-            width: 20,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-          ),
-        ],
-      );
-    }).toList();
+  Color _getPercentageColor(int percentage) {
+    if (percentage >= 80) return Colors.green;
+    if (percentage >= 60) return Colors.orange;
+    return Colors.red;
   }
 }
