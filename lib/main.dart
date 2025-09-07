@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
+// import 'package:firebase_core/firebase_core.dart';
 
 import '../core/app_export.dart';
 import '../widgets/custom_error_widget.dart';
+import '../config/firebase_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await FirebaseConfig.initialize();
+  FirebaseConfig.configureAuth();
+  FirebaseConfig.configureFirestore();
 
   bool _hasShownError = false;
 

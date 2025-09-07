@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _logoOpacityAnimation;
   late Animation<double> _gradientAnimation;
 
-  bool _isInitializing = true;
+  // bool _isInitializing = true;
   String _initializationStatus = 'Initializing...';
 
   @override
@@ -181,7 +181,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _handleInitializationError(dynamic error) {
     if (mounted) {
       setState(() {
-        _isInitializing = false;
+        // _isInitializing = false;
         _initializationStatus = 'Initialization failed';
       });
 
@@ -213,7 +213,7 @@ class _SplashScreenState extends State<SplashScreen>
               onPressed: () {
                 Navigator.of(context).pop();
                 setState(() {
-                  _isInitializing = true;
+                  // _isInitializing = true;
                   _initializationStatus = 'Retrying...';
                 });
                 _initializeApp();

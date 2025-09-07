@@ -3,12 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/custom_icon_widget.dart';
-import './widgets/login_button_widget.dart';
-import './widgets/login_form_widget.dart';
-import './widgets/role_selector_widget.dart';
-import './widgets/university_logo_widget.dart';
 import 'widgets/login_button_widget.dart';
 import 'widgets/login_form_widget.dart';
 import 'widgets/role_selector_widget.dart';

@@ -369,7 +369,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
           isAccepted: _isTermsAccepted,
           onChanged: (value) {
             setState(() {
-              _isTermsAccepted = value ?? false;
+              _isTermsAccepted = value;
             });
           },
         );

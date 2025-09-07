@@ -19,7 +19,7 @@ class _FacultyDashboardState extends State<FacultyDashboard>
     with TickerProviderStateMixin {
   late TabController _tabController;
   String _selectedFilter = 'all';
-  bool _isRefreshing = false;
+  // bool _isRefreshing = false;
 
   // Mock data for faculty dashboard
   final Map<String, dynamic> facultyData = {
@@ -507,14 +507,14 @@ class _FacultyDashboardState extends State<FacultyDashboard>
 
   Future<void> _handleRefresh() async {
     setState(() {
-      _isRefreshing = true;
+        // _isRefreshing = true;
     });
 
     // Simulate API call
     await Future.delayed(const Duration(seconds: 2));
 
     setState(() {
-      _isRefreshing = false;
+        // _isRefreshing = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(

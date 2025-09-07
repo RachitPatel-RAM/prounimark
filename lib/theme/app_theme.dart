@@ -134,7 +134,7 @@ class AppTheme {
     ),
 
     // Card theme for floating session cards
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardLight,
       elevation: 2.0, // Subtle elevation for gentle hierarchy
       shadowColor: shadowLight,
@@ -321,7 +321,7 @@ class AppTheme {
       valueIndicatorColor: primaryLight,
     ),
 
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryLight,
       unselectedLabelColor: textSecondaryLight,
       indicatorColor: primaryLight,
@@ -375,7 +375,7 @@ class AppTheme {
     ),
 
     // Dialog theme
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: dialogLight,
       elevation: 8.0,
       shape: RoundedRectangleBorder(
@@ -452,7 +452,7 @@ class AppTheme {
     ),
 
     // Card theme for floating session cards (Dark)
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardDark,
       elevation: 2.0,
       shadowColor: shadowDark,
@@ -639,7 +639,7 @@ class AppTheme {
       valueIndicatorColor: primaryDark,
     ),
 
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryDark,
       unselectedLabelColor: textSecondaryDark,
       indicatorColor: primaryDark,
@@ -693,7 +693,7 @@ class AppTheme {
     ),
 
     // Dialog theme (Dark)
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: dialogDark,
       elevation: 8.0,
       shape: RoundedRectangleBorder(
@@ -718,7 +718,7 @@ class AppTheme {
     final Color textPrimary = isLight ? textPrimaryLight : textPrimaryDark;
     final Color textSecondary =
         isLight ? textSecondaryLight : textSecondaryDark;
-    final Color textDisabled = isLight ? textDisabledLight : textDisabledDark;
+    // final Color textDisabled = isLight ? textDisabledLight : textDisabledDark;
 
     return TextTheme(
       // Display styles - for large headings and hero text

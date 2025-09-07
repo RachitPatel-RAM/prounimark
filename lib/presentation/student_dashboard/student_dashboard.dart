@@ -4,13 +4,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../theme/app_theme.dart';
-import '../../widgets/custom_icon_widget.dart';
-import './widgets/active_session_card.dart';
-import './widgets/attendance_stats_card.dart';
-import './widgets/empty_sessions_widget.dart';
-import './widgets/student_header_widget.dart';
-import './widgets/today_schedule_card.dart';
 import 'widgets/active_session_card.dart';
 import 'widgets/attendance_stats_card.dart';
 import 'widgets/empty_sessions_widget.dart';
@@ -28,7 +21,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
   late TabController _tabController;
   bool _isLocationEnabled = false;
   double? _locationAccuracy;
-  bool _isLoading = false;
+  // bool _isLoading = false;
   int _selectedIndex = 0;
 
   // Mock student data
@@ -143,7 +136,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
 
   Future<void> _refreshData() async {
     setState(() {
-      _isLoading = true;
+        // _isLoading = true;
     });
 
     // Simulate API call delay
@@ -152,7 +145,7 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
     await _checkLocationPermission();
 
     setState(() {
-      _isLoading = false;
+        // _isLoading = false;
     });
   }
 

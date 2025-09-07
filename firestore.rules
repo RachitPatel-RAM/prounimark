@@ -1,0 +1,197 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isFaculty() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'faculty';
+    }
+    
+    function isStudent() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidEmail() {
+      return request.auth.token.email.matches('.*@darshan\\.ac\\.in$');
+    }
+    
+    function isWithinEditWindow(timestamp) {
+      return timestamp > (now - duration.value(48, 'h'));
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isOwner(userId);
+      
+      // Only admins can create users (except during registration)
+      allow create: if isAdmin() || 
+                       (isAuthenticated() && 
+                        request.auth.uid == userId && 
+                        isValidEmail() &&
+                        request.resource.data.role == 'student');
+      
+      // Users can update their own data, admins can update any user
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Branches collection rules
+    match /branches/{branchId} {
+      // Everyone can read branches
+      allow read: if isAuthenticated();
+      
+      // Only admins can create, update, or delete branches
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Classes collection rules
+    match /classes/{classId} {
+      // Everyone can read classes
+      allow read: if isAuthenticated();
+      
+      // Only admins can create, update, or delete classes
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Batches collection rules
+    match /batches/{batchId} {
+      // Everyone can read batches
+      allow read: if isAuthenticated();
+      
+      // Only admins can create, update, or delete batches
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Sessions collection rules
+    match /sessions/{sessionId} {
+      // Faculty can read their own sessions, admins can read all
+      allow read: if isFaculty() && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.uid == resource.data.facultyId ||
+                  isAdmin();
+      
+      // Students can read sessions for their branch/class/batch
+      allow read: if isStudent() && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch == resource.data.branch &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.className == resource.data.className &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.batch in resource.data.batches;
+      
+      // Only faculty can create sessions
+      allow create: if isFaculty() && 
+                       request.resource.data.facultyId == request.auth.uid;
+      
+      // Faculty can update their own sessions, admins can update any
+      allow update: if (isFaculty() && 
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.uid == resource.data.facultyId) ||
+                      isAdmin();
+      
+      // Only admins can delete sessions
+      allow delete: if isAdmin();
+      
+      // Attendance subcollection rules
+      match /attendance/{studentId} {
+        // Students can read their own attendance
+        allow read: if isOwner(studentId);
+        
+        // Faculty can read attendance for their sessions
+        allow read: if isFaculty() && 
+                       get(/databases/$(database)/documents/sessions/$(sessionId)).data.facultyId == request.auth.uid;
+        
+        // Admins can read all attendance
+        allow read: if isAdmin();
+        
+        // Students can create their own attendance (mark attendance)
+        allow create: if isOwner(studentId) && 
+                         isStudent() &&
+                         request.resource.data.studentId == request.auth.uid &&
+                         request.resource.data.timestamp <= now &&
+                         // Validate location data exists
+                         request.resource.data.keys().hasAll(['location', 'timestamp']) &&
+                         request.resource.data.location.keys().hasAll(['latitude', 'longitude']);
+        
+        // Faculty can update attendance within 48 hours, admins can always update
+        allow update: if (isFaculty() && 
+                         get(/databases/$(database)/documents/sessions/$(sessionId)).data.facultyId == request.auth.uid &&
+                         isWithinEditWindow(resource.data.timestamp)) ||
+                        isAdmin();
+        
+        // Only admins can delete attendance
+        allow delete: if isAdmin();
+      }
+    }
+    
+    // System settings and logs (admin only)
+    match /system/{document} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Audit logs (admin only)
+    match /audit_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Device bindings for anti-proxy measures
+    match /device_bindings/{deviceId} {
+      // Users can read their own device binding
+      allow read: if isAuthenticated() && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.deviceId == deviceId;
+      
+      // Users can create their own device binding
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own device binding
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Admins can read all device bindings
+      allow read: if isAdmin();
+    }
+    
+    // Session codes for validation (temporary storage)
+    match /session_codes/{codeId} {
+      // Faculty can read codes for their sessions
+      allow read: if isFaculty() && 
+                     get(/databases/$(database)/documents/sessions/$(resource.data.sessionId)).data.facultyId == request.auth.uid;
+      
+      // Students can read active codes for their sessions
+      allow read: if isStudent() && 
+                     resource.data.isActive == true &&
+                     get(/databases/$(database)/documents/sessions/$(resource.data.sessionId)).data.branch == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.branch;
+      
+      // Only faculty can create session codes
+      allow create: if isFaculty() && 
+                       request.resource.data.facultyId == request.auth.uid;
+      
+      // Faculty can update their own codes, admins can update any
+      allow update: if (isFaculty() && 
+                       resource.data.facultyId == request.auth.uid) ||
+                      isAdmin();
+      
+      // Only admins can delete codes
+      allow delete: if isAdmin();
+    }
+    
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
