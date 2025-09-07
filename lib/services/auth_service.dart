@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_functions/firebase_functions.dart';
+import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -19,7 +19,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  // final FirebaseFunctions _functions = FirebaseFunctions.instance; // Discontinued
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
 
@@ -89,28 +89,21 @@ class AuthService {
         return AuthResult.failure('Invalid admin credentials');
       }
 
-      // Call Cloud Function for admin authentication
-      final callable = _functions.httpsCallable('adminLogin');
-      final result = await callable.call({
-        'adminId': adminId,
-        'password': password,
-      });
-
-      if (result.data['success'] == true) {
-        // Create admin user model
-        final adminUser = UserModel(
-          id: 'admin',
-          name: 'System Administrator',
-          email: 'admin@darshan.ac.in',
-          role: UserRole.admin,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        
-        return AuthResult.success(adminUser);
-      } else {
-        return AuthResult.failure(result.data['error'] ?? 'Admin authentication failed');
-      }
+      // For development: Direct admin authentication
+      // In production, this should call your deployed Cloud Function via HTTP
+      final adminUser = UserModel(
+        id: 'admin',
+        name: 'System Administrator',
+        email: 'admin@darshan.ac.in',
+        role: UserRole.admin,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      // Store admin user in Firestore
+      await _firestore.collection('users').doc('admin').set(adminUser.toFirestore());
+      
+      return AuthResult.success(adminUser);
 
     } catch (e) {
       return AuthResult.failure('Admin login failed: $e');
@@ -136,27 +129,31 @@ class AuthService {
       final deviceUuid = await _generateDeviceUuid();
       final instIdHash = await _generateInstIdHash(deviceUuid);
 
-      // Call Cloud Function to complete registration
-      final callable = _functions.httpsCallable('completeStudentRegistration');
-      final result = await callable.call({
-        'enrollmentNo': enrollmentNo.toUpperCase(),
-        'branchId': branchId,
-        'classId': classId,
-        'batchId': batchId,
-        'phone': phone,
-        'pin': pin,
-        'deviceUuid': deviceUuid,
-        'instIdHash': instIdHash,
-      });
+      // For development: Direct registration
+      // In production, this should call your deployed Cloud Function via HTTP
+      final userModel = UserModel(
+        id: user.uid,
+        name: user.displayName ?? 'Student',
+        email: user.email ?? '',
+        role: UserRole.student,
+        enrollmentNo: enrollmentNo.toUpperCase(),
+        branch: branchId,
+        classId: classId,
+        batchId: batchId,
+        deviceBinding: DeviceBinding(
+          instIdHash: instIdHash,
+          platform: await _getPlatform(),
+          boundAt: DateTime.now(),
+        ),
+        pinHash: pin != null ? _hashPin(pin) : null,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-      if (result.data['success'] == true) {
-        // Get updated user data
-        final userDoc = await _firestore.collection('users').doc(user.uid).get();
-        final userModel = UserModel.fromFirestore(userDoc);
-        return AuthResult.success(userModel);
-      } else {
-        return AuthResult.failure(result.data['error'] ?? 'Registration failed');
-      }
+      // Store user data in Firestore
+      await _firestore.collection('users').doc(user.uid).set(userModel.toFirestore());
+      
+      return AuthResult.success(userModel);
 
     } catch (e) {
       return AuthResult.failure('Registration failed: $e');
@@ -282,12 +279,18 @@ class AuthService {
       final user = _auth.currentUser;
       if (user == null) return false;
 
-      final callable = _functions.httpsCallable('verifyPin');
-      final result = await callable.call({
-        'pin': pin,
-      });
+      // Get user data from Firestore
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) return false;
 
-      return result.data['success'] == true;
+      final userData = userDoc.data()!;
+      final storedPinHash = userData['pinHash'] as String?;
+      
+      if (storedPinHash == null) return false;
+
+      // Verify PIN hash
+      final inputPinHash = _hashPin(pin);
+      return inputPinHash == storedPinHash;
     } catch (e) {
       return false;
     }
@@ -296,16 +299,47 @@ class AuthService {
   /// Reset device binding (admin only)
   Future<bool> resetDeviceBinding(String userId, String reason) async {
     try {
-      final callable = _functions.httpsCallable('resetDeviceBinding');
-      final result = await callable.call({
-        'userId': userId,
-        'reason': reason,
+      // For development: Direct device binding reset
+      // In production, this should call your deployed Cloud Function via HTTP
+      await _firestore.collection('users').doc(userId).update({
+        'deviceBinding': null,
+        'updatedAt': DateTime.now(),
       });
 
-      return result.data['success'] == true;
+      // Log the reset action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'DEVICE_BINDING_RESET',
+        'userId': userId,
+        'reason': reason,
+        'timestamp': DateTime.now(),
+      });
+
+      return true;
     } catch (e) {
       return false;
     }
+  }
+
+  /// Helper method to get platform
+  Future<String> _getPlatform() async {
+    try {
+      final deviceInfo = await _deviceInfo.deviceInfo;
+      if (deviceInfo is AndroidDeviceInfo) {
+        return 'android';
+      } else if (deviceInfo is IosDeviceInfo) {
+        return 'ios';
+      }
+      return 'unknown';
+    } catch (e) {
+      return 'unknown';
+    }
+  }
+
+  /// Helper method to hash PIN
+  String _hashPin(String pin) {
+    final bytes = utf8.encode(pin);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 }
 
