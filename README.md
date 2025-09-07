@@ -1,236 +1,437 @@
 # UniMark - Secure Attendance Management System
 
-A comprehensive Flutter application for secure attendance management with anti-proxy measures, GPS-based location verification, and role-based access control.
+A production-grade Flutter application for secure attendance management with defense-in-depth security measures to prevent proxy/false attendance.
 
-## Features
+## 🎯 Features
 
-### 🔐 Authentication & Roles
-- **Students**: Register with university email domain (@darshan.ac.in)
-- **Faculty**: Created by admin only, no self-registration
-- **Admin**: Static login (ID: ADMIN404, Password: ADMIN9090@@@@)
-
-### 📚 Academic Hierarchy Management
-- **Branches**: Admin-managed academic branches
-- **Classes**: Classes within branches
-- **Batches**: Batches within classes
-- **Student Registration**: Dropdown-based selection, locked after signup
-
-### 🎓 Attendance System
-- **3-digit random codes** for each session
+### Security Features
+- **Google SSO** with domain restriction (@darshan.ac.in only)
+- **Admin static credentials** (ID: ADMIN404, PWD: ADMIN9090@@@@)
+- **Biometric authentication** with PIN fallback
+- **Device binding** to prevent multi-device usage
 - **GPS location verification** (500m radius)
+- **Play Integrity API** integration for device verification
+- **App Check** enforcement
+- **Server-side HMAC** code verification
+- **Comprehensive audit logging**
+
+### User Roles
+- **Admin**: Full system management, faculty creation, device binding reset
+- **Faculty**: Session creation, attendance monitoring, editing within 48h
+- **Student**: Attendance submission with multi-factor verification
+
+### Core Functionality
+- **Dynamic hierarchy management** (Branch → Class → Batch)
+- **Secure session creation** with 3-digit codes and TTL
 - **Real-time attendance tracking**
-- **Anti-proxy measures** with device binding
-- **48-hour edit window** for faculty
+- **Comprehensive reporting** and analytics
+- **Offline-capable** with sync when online
 
-### 🛡 Security Features
-- **Location-based verification**
-- **Device ID binding** (one device per student)
-- **Firebase security rules**
-- **Session code validation**
-- **Audit logging**
+## 🏗️ Architecture
 
-## Screens Implemented
+### Frontend (Flutter)
+- **Single app** supporting all three roles
+- **Red/Black/White theme** with flying-card UI
+- **Responsive design** using Sizer
+- **Biometric integration** with local_auth
+- **Location services** with geolocator
+- **Secure storage** for device binding
 
-### ✅ Completed Screens
-1. **Login Screen** - Role-based authentication
-2. **Student Registration** - With hierarchical dropdowns
-3. **Student Dashboard** - View active sessions
-4. **Faculty Dashboard** - Create and manage sessions
-5. **Create Attendance Session** - Faculty session creation
-6. **Mark Attendance Screen** - Student attendance submission
-7. **Attendance History Screen** - Student attendance records
-8. **Admin Dashboard** - Complete system management
-9. **Manage Hierarchy Screen** - Branch/Class/Batch management
-10. **Profile Management Screen** - User profile management
+### Backend (Firebase)
+- **Cloud Functions** (TypeScript) for all server-side logic
+- **Firestore** for data storage with comprehensive security rules
+- **Firebase Auth** with custom claims
+- **App Check** for request verification
+- **Cloud Logging** for audit trails
 
-## Technical Stack
+### Security Model
+- **Defense-in-depth** approach
+- **Server-side validation** for all critical operations
+- **Client-side security rules** enforcement
+- **Rate limiting** and abuse prevention
+- **Comprehensive monitoring** and alerting
 
-- **Frontend**: Flutter 3.6.0+
-- **Backend**: Firebase (Auth, Firestore, Storage)
-- **Location**: Geolocator with GPS verification
-- **UI**: Material 3 with custom red/black/white theme
-- **State Management**: StatefulWidget with Firebase streams
-- **Security**: Firebase Security Rules + custom validation
+## 🚀 Quick Start
 
-## Setup Instructions
+### Prerequisites
+- Flutter SDK 3.6.0+
+- Node.js 18+
+- Firebase CLI
+- Android Studio / Xcode
+- Google Cloud Console access
 
-### 1. Prerequisites
-- Flutter SDK 3.6.0 or higher
-- Android Studio / VS Code
-- Firebase project setup
-- Android device/emulator for testing
+### 1. Firebase Setup
 
-### 2. Firebase Setup
-
-1. Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
-2. Enable Authentication with Email/Password
-3. Create Firestore database
-4. Download `google-services.json` and place in `android/app/`
-5. Deploy Firestore security rules from `firestore.rules`
-
-### 3. Installation
-
+#### Create Firebase Project
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Create new project
+firebase projects:create unimark-attendance
+
+# Initialize Firebase in project
+firebase init
+```
+
+#### Configure Firebase Services
+```bash
+# Enable required services
+firebase use --add unimark-attendance
+
+# Set up App Check
+firebase appcheck:apps:register android com.example.unimark
+firebase appcheck:apps:register ios com.example.unimark
+```
+
+#### Configure Authentication
+1. Go to Firebase Console → Authentication → Sign-in method
+2. Enable **Google** provider
+3. Add authorized domains: `darshan.ac.in`
+4. Configure OAuth consent screen
+
+#### Configure Firestore
+1. Go to Firebase Console → Firestore Database
+2. Create database in production mode
+3. Deploy security rules: `firebase deploy --only firestore:rules`
+4. Deploy indexes: `firebase deploy --only firestore:indexes`
+
+### 2. Google Cloud Setup
+
+#### Enable APIs
+```bash
+# Enable required APIs
+gcloud services enable playintegrity.googleapis.com
+gcloud services enable firebase.googleapis.com
+gcloud services enable cloudfunctions.googleapis.com
+```
+
+#### Configure Play Integrity
+1. Go to Google Cloud Console → Play Integrity API
+2. Create credentials for Android app
+3. Configure integrity verdict settings
+4. Add package name: `com.example.unimark`
+
+### 3. Flutter Setup
+
+#### Install Dependencies
+```bash
 cd unimark_7853
-
-# Install dependencies
 flutter pub get
-
-# Run the app
-flutter run
 ```
 
-### 4. Build APK
+#### Configure Firebase
+1. Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
+2. Place in appropriate directories:
+   - Android: `android/app/google-services.json`
+   - iOS: `ios/Runner/GoogleService-Info.plist`
 
-```bash
-# Build debug APK
-flutter build apk --debug
+#### Configure App Check
+```dart
+// In main.dart
+import 'package:firebase_app_check/firebase_app_check.dart';
 
-# Build release APK
-flutter build apk --release
-```
-
-## Project Structure
-
-```
-lib/
-├── config/
-│   └── firebase_config.dart          # Firebase configuration
-├── core/
-│   └── app_export.dart               # Core exports
-├── models/
-│   ├── user_model.dart               # User data model
-│   ├── session_model.dart            # Session data model
-│   ├── attendance_model.dart         # Attendance data model
-│   └── hierarchy_model.dart          # Hierarchy data models
-├── services/
-│   ├── firebase_service.dart         # Firebase operations
-│   └── location_service.dart         # Location services
-├── presentation/
-│   ├── login_screen/                 # Authentication
-│   ├── student_registration_screen/  # Student signup
-│   ├── student_dashboard/            # Student main screen
-│   ├── faculty_dashboard/            # Faculty main screen
-│   ├── create_attendance_session_screen/ # Session creation
-│   ├── mark_attendance_screen/       # Attendance submission
-│   ├── attendance_history_screen/    # Attendance records
-│   ├── admin_dashboard_screen/       # Admin management
-│   ├── manage_hierarchy_screen/      # Hierarchy management
-│   └── profile_management_screen/    # Profile management
-├── routes/
-│   └── app_routes.dart               # App routing
-├── theme/
-│   └── app_theme.dart                # App theming
-├── widgets/
-│   └── custom_*.dart                 # Reusable widgets
-└── main.dart                         # App entry point
-```
-
-## Usage Guide
-
-### For Students
-1. Register with university email (@darshan.ac.in)
-2. Select branch, class, and batch during registration
-3. View active attendance sessions
-4. Mark attendance using 3-digit code and location verification
-5. View attendance history and statistics
-
-### For Faculty
-1. Login with admin-created credentials
-2. Create attendance sessions with location and code
-3. Monitor real-time attendance
-4. Edit attendance within 48-hour window
-5. View attendance reports
-
-### For Admins
-1. Login with static credentials (ADMIN404/ADMIN9090@@@@)
-2. Manage branches, classes, and batches
-3. Create faculty accounts
-4. View all system data and reports
-5. Override attendance records
-
-## Security Features
-
-### Anti-Proxy Measures
-- **GPS Location Verification**: Students must be within 500m of session
-- **Device Binding**: One device per student account
-- **Session Codes**: Time-limited 3-digit codes
-- **Email Domain Validation**: Only @darshan.ac.in emails allowed
-- **Firebase Security Rules**: Comprehensive access control
-
-### Data Protection
-- **Encrypted Storage**: All data encrypted in Firestore
-- **Role-based Access**: Users can only access their data
-- **Audit Logging**: All actions logged for security
-- **Session Management**: Secure session handling
-
-## Configuration
-
-### Environment Variables
-Create `env.json` in the root directory:
-```json
-{
-  "firebase_api_key": "your_api_key",
-  "firebase_project_id": "your_project_id",
-  "university_domain": "@darshan.ac.in",
-  "default_radius": 500
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp();
+  
+  // Configure App Check
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.playIntegrity,
+    appleProvider: AppleProvider.appAttest,
+  );
+  
+  runApp(MyApp());
 }
 ```
 
-### Firebase Security Rules
-Deploy the provided `firestore.rules` to your Firebase project for proper security.
+### 4. Build and Deploy
 
-## Testing
+#### Deploy Cloud Functions
+```bash
+cd functions
+npm install
+npm run build
+firebase deploy --only functions
+```
 
-### Test Credentials
-- **Admin**: ID: ADMIN404, Password: ADMIN9090@@@@
-- **Faculty**: Created by admin
-- **Students**: Register with @darshan.ac.in email
+#### Build Flutter App
+```bash
+# Android
+flutter build apk --release
 
-### Test Scenarios
-1. Student registration and login
-2. Faculty session creation
-3. Attendance marking with location
-4. Admin hierarchy management
-5. Security rule validation
+# iOS
+flutter build ios --release
+```
 
-## Troubleshooting
+## 🔧 Configuration
+
+### Environment Variables
+Create `env.json` in project root:
+```json
+{
+  "firebase": {
+    "apiKey": "your-api-key",
+    "authDomain": "unimark-attendance.firebaseapp.com",
+    "projectId": "unimark-attendance",
+    "storageBucket": "unimark-attendance.appspot.com",
+    "messagingSenderId": "123456789",
+    "appId": "1:123456789:android:abcdef123456"
+  },
+  "admin": {
+    "id": "ADMIN404",
+    "password": "ADMIN9090@@@@"
+  },
+  "university": {
+    "domain": "@darshan.ac.in",
+    "name": "Darshan University"
+  }
+}
+```
+
+### Firebase Functions Config
+```bash
+# Set admin credentials
+firebase functions:config:set admin.id="ADMIN404" admin.password="ADMIN9090@@@@"
+
+# Set Play Integrity key
+firebase functions:config:set playintegrity.key="your-play-integrity-key"
+
+# Set seed master key
+firebase functions:config:set security.seed_master="your-seed-master-key"
+```
+
+## 🧪 Testing
+
+### Unit Tests
+```bash
+# Run Flutter tests
+flutter test
+
+# Run Cloud Functions tests
+cd functions
+npm test
+```
+
+### Integration Tests
+```bash
+# Start Firebase emulators
+firebase emulators:start
+
+# Run integration tests
+flutter test integration_test/
+```
+
+### Manual Testing
+1. **Admin Login**: Use credentials ADMIN404 / ADMIN9090@@@@
+2. **Student Registration**: Use @darshan.ac.in email
+3. **Faculty Creation**: Admin creates faculty accounts
+4. **Session Creation**: Faculty creates sessions
+5. **Attendance Submission**: Students submit with biometric/PIN
+
+## 📱 Usage
+
+### Admin Workflow
+1. Login with admin credentials
+2. Create branches, classes, and batches
+3. Create faculty accounts
+4. Monitor system activity
+5. Reset device bindings when needed
+6. View audit logs
+
+### Faculty Workflow
+1. Login with Google SSO (@darshan.ac.in)
+2. Select branch, class, and batches
+3. Create attendance session
+4. Share 3-digit code with students
+5. Monitor real-time attendance
+6. Edit attendance within 48 hours
+7. Close session when complete
+
+### Student Workflow
+1. Login with Google SSO (@darshan.ac.in)
+2. Complete registration (first time only)
+3. Set up biometric or PIN
+4. View active sessions
+5. Enter session code
+6. Authenticate with biometric/PIN
+7. Submit attendance
+8. View attendance history
+
+## 🔒 Security Considerations
+
+### Defense-in-Depth Measures
+1. **Identity Verification**: Google SSO + domain restriction
+2. **Device Binding**: Prevents multi-device usage
+3. **Location Verification**: GPS proximity check (500m)
+4. **Biometric/PIN**: Local authentication
+5. **Code Verification**: Server-side HMAC validation
+6. **Play Integrity**: Device integrity verification
+7. **App Check**: Request authenticity
+8. **Rate Limiting**: Prevents brute force attacks
+9. **Audit Logging**: Comprehensive activity tracking
+
+### Best Practices
+- Rotate server seeds periodically
+- Monitor audit logs for suspicious activity
+- Keep Firebase project secure
+- Use HTTPS for all communications
+- Implement proper error handling
+- Regular security updates
+
+## 🚨 Troubleshooting
 
 ### Common Issues
-1. **Location not working**: Enable location permissions
-2. **Firebase connection**: Check google-services.json
-3. **Build errors**: Run `flutter clean && flutter pub get`
-4. **Permission denied**: Check Firestore security rules
+
+#### Firebase Connection Issues
+```bash
+# Check Firebase configuration
+firebase projects:list
+firebase use --add your-project-id
+
+# Verify service account
+gcloud auth application-default login
+```
+
+#### Build Issues
+```bash
+# Clean and rebuild
+flutter clean
+flutter pub get
+flutter build apk --release
+```
+
+#### Permission Issues
+- Check location permissions in device settings
+- Verify biometric enrollment
+- Ensure Google Play Services is updated
+
+#### Authentication Issues
+- Verify domain restriction (@darshan.ac.in)
+- Check OAuth consent screen configuration
+- Ensure proper SHA-1 fingerprints
 
 ### Debug Mode
-Enable debug logging by setting `debugMode: true` in Firebase config.
+```bash
+# Enable debug logging
+flutter run --debug
 
-## Contributing
+# View Firebase logs
+firebase functions:log
+```
+
+## 📊 Monitoring
+
+### Firebase Console
+- **Authentication**: User activity and sign-ins
+- **Firestore**: Database usage and performance
+- **Functions**: Execution logs and errors
+- **App Check**: Verification statistics
+
+### Cloud Logging
+- **Audit Logs**: All security events
+- **Error Logs**: Application errors
+- **Performance Logs**: Function execution times
+
+### Custom Metrics
+- Attendance submission rates
+- Authentication success/failure rates
+- Location verification accuracy
+- Device binding statistics
+
+## 🔄 CI/CD Pipeline
+
+### GitHub Actions
+```yaml
+name: Deploy UniMark
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - uses: actions/setup-java@v3
+      - uses: subosito/flutter-action@v2
+      
+      - name: Install dependencies
+        run: |
+          cd functions && npm install
+          flutter pub get
+      
+      - name: Run tests
+        run: |
+          flutter test
+          cd functions && npm test
+      
+      - name: Deploy to Firebase
+        run: |
+          firebase deploy --only functions,firestore
+          flutter build apk --release
+```
+
+## 📈 Performance Optimization
+
+### Flutter App
+- Use `const` constructors where possible
+- Implement proper state management
+- Optimize image loading and caching
+- Use lazy loading for large lists
+
+### Cloud Functions
+- Implement proper caching
+- Use connection pooling
+- Optimize database queries
+- Implement rate limiting
+
+### Firestore
+- Use composite indexes efficiently
+- Implement pagination for large datasets
+- Use offline persistence
+- Optimize security rules
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests
 5. Submit a pull request
 
-## License
+### Code Style
+- Follow Flutter/Dart style guide
+- Use meaningful variable names
+- Add comprehensive comments
+- Write unit tests for new features
+
+## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Support
+## 🆘 Support
 
 For support and questions:
-- Email: support@unimark.edu
-- Documentation: [Project Wiki]
-- Issues: [GitHub Issues]
+- Create an issue in the repository
+- Contact the development team
+- Check the troubleshooting section
+- Review Firebase documentation
 
-## Version History
+## 🔮 Future Enhancements
 
-- **v1.0.0**: Initial release with all core features
-  - Complete attendance management system
-  - Role-based authentication
-  - GPS-based location verification
-  - Admin dashboard and hierarchy management
-  - Security rules and anti-proxy measures
+- **Offline Mode**: Full offline capability
+- **Push Notifications**: Real-time updates
+- **Analytics Dashboard**: Advanced reporting
+- **Multi-language Support**: Internationalization
+- **API Integration**: Third-party system integration
+- **Advanced Security**: Additional verification methods
+
+---
+
+**UniMark** - Secure, Reliable, Production-Ready Attendance Management

@@ -1,216 +1,333 @@
+import 'dart:math';
 import 'package:geolocator/geolocator.dart';
-// import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../models/session_model.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
   factory LocationService() => _instance;
   LocationService._internal();
 
-  /// Check if location services are enabled
-  Future<bool> isLocationServiceEnabled() async {
-    return await Geolocator.isLocationServiceEnabled();
-  }
+  // Constants
+  static const double _defaultRadius = 500.0; // meters
+  static const double _minimumAccuracy = 50.0; // meters
+  static const int _locationTimeoutSeconds = 10;
 
-  /// Check location permission status
-  Future<LocationPermission> checkLocationPermission() async {
-    return await Geolocator.checkPermission();
-  }
-
-  /// Request location permission
-  Future<LocationPermission> requestLocationPermission() async {
-    return await Geolocator.requestPermission();
-  }
-
-  /// Get current location with high accuracy
-  Future<Position> getCurrentLocation() async {
+  /// Check and request location permissions
+  Future<LocationPermissionResult> checkAndRequestPermissions() async {
     try {
       // Check if location services are enabled
-      bool serviceEnabled = await isLocationServiceEnabled();
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        throw LocationServiceException('Location services are disabled. Please enable them to mark attendance.');
+        return LocationPermissionResult.failure(
+          'Location services are disabled. Please enable location services in device settings.'
+        );
       }
 
-      // Check and request permissions
-      LocationPermission permission = await checkLocationPermission();
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      
       if (permission == LocationPermission.denied) {
-        permission = await requestLocationPermission();
+        permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          throw LocationServiceException('Location permissions are denied. Please grant location permission to mark attendance.');
+          return LocationPermissionResult.failure(
+            'Location permissions are denied. Please grant location permission to mark attendance.'
+          );
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw LocationServiceException('Location permissions are permanently denied. Please enable them in device settings.');
+        return LocationPermissionResult.failure(
+          'Location permissions are permanently denied. Please enable location permissions in device settings.'
+        );
+      }
+
+      return LocationPermissionResult.success();
+    } catch (e) {
+      return LocationPermissionResult.failure('Permission check failed: $e');
+    }
+  }
+
+  /// Get current location with high accuracy
+  Future<LocationResult> getCurrentLocation() async {
+    try {
+      // Check permissions first
+      final permissionResult = await checkAndRequestPermissions();
+      if (!permissionResult.isSuccess) {
+        return LocationResult.failure(permissionResult.error!);
       }
 
       // Get current position with high accuracy
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: _locationTimeoutSeconds),
       );
 
-      return position;
-    } catch (e) {
-      if (e is LocationServiceException) {
-        rethrow;
+      // Check accuracy
+      if (position.accuracy > _minimumAccuracy) {
+        return LocationResult.failure(
+          'Location accuracy is too low (${position.accuracy.toStringAsFixed(0)}m). Please move to an area with better GPS signal.'
+        );
       }
-      throw LocationServiceException('Failed to get location: $e');
+
+      final location = LocationData(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+      );
+
+      return LocationResult.success(location);
+    } catch (e) {
+      return LocationResult.failure('Failed to get location: $e');
     }
   }
 
-  /// Calculate distance between two coordinates in meters
-  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
-  }
-
-  /// Check if a position is within a certain radius of another position
-  bool isWithinRadius(Position position1, Position position2, double radiusInMeters) {
-    double distance = calculateDistance(
-      position1.latitude,
-      position1.longitude,
-      position2.latitude,
-      position2.longitude,
+  /// Check if location is within session radius
+  bool isWithinRadius(
+    LocationData userLocation,
+    FacultyLocation sessionLocation,
+    double radiusMeters,
+  ) {
+    final distance = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      sessionLocation.lat,
+      sessionLocation.lng,
     );
-    return distance <= radiusInMeters;
+
+    return distance <= radiusMeters;
   }
 
-  /// Get location permission status for UI display
-  Future<LocationPermissionStatus> getLocationPermissionStatus() async {
-    bool serviceEnabled = await isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return LocationPermissionStatus.disabled;
-    }
+  /// Calculate distance between two points using Haversine formula
+  double calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+    
+    final double lat1Rad = lat1 * (pi / 180);
+    final double lat2Rad = lat2 * (pi / 180);
+    final double deltaLatRad = (lat2 - lat1) * (pi / 180);
+    final double deltaLonRad = (lon2 - lon1) * (pi / 180);
 
-    LocationPermission permission = await checkLocationPermission();
-    switch (permission) {
-      case LocationPermission.denied:
-        return LocationPermissionStatus.denied;
-      case LocationPermission.deniedForever:
-        return LocationPermissionStatus.deniedForever;
-      case LocationPermission.whileInUse:
-        return LocationPermissionStatus.granted;
-      case LocationPermission.always:
-        return LocationPermissionStatus.granted;
-      case LocationPermission.unableToDetermine:
-        return LocationPermissionStatus.unknown;
+    final double a = sin(deltaLatRad / 2) * sin(deltaLatRad / 2) +
+        cos(lat1Rad) * cos(lat2Rad) *
+        sin(deltaLonRad / 2) * sin(deltaLonRad / 2);
+    final double c = 2 * asin(sqrt(a));
+
+    return earthRadius * c;
+  }
+
+  /// Verify location for attendance submission
+  Future<LocationVerificationResult> verifyLocationForAttendance(
+    FacultyLocation sessionLocation,
+    double sessionRadius,
+  ) async {
+    try {
+      // Get current location
+      final locationResult = await getCurrentLocation();
+      if (!locationResult.isSuccess) {
+        return LocationVerificationResult.failure(locationResult.error!);
+      }
+
+      final userLocation = locationResult.location!;
+
+      // Check if within radius
+      final isWithinRadius = this.isWithinRadius(
+        userLocation,
+        sessionLocation,
+        sessionRadius,
+      );
+
+      if (!isWithinRadius) {
+        final distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          sessionLocation.lat,
+          sessionLocation.lng,
+        );
+
+        return LocationVerificationResult.failure(
+          'You are ${distance.toStringAsFixed(0)}m away from the session location. Please move within ${sessionRadius.toStringAsFixed(0)}m to mark attendance.'
+        );
+      }
+
+      return LocationVerificationResult.success(userLocation);
+    } catch (e) {
+      return LocationVerificationResult.failure('Location verification failed: $e');
     }
   }
 
-  /// Open device location settings
+  /// Get location permission status
+  Future<LocationPermissionStatus> getPermissionStatus() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return LocationPermissionStatus.disabled;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      switch (permission) {
+        case LocationPermission.denied:
+          return LocationPermissionStatus.denied;
+        case LocationPermission.deniedForever:
+          return LocationPermissionStatus.deniedForever;
+        case LocationPermission.whileInUse:
+          return LocationPermissionStatus.whileInUse;
+        case LocationPermission.always:
+          return LocationPermissionStatus.always;
+        case LocationPermission.unableToDetermine:
+          return LocationPermissionStatus.unableToDetermine;
+      }
+    } catch (e) {
+      return LocationPermissionStatus.error;
+    }
+  }
+
+  /// Open location settings
   Future<void> openLocationSettings() async {
-    await Geolocator.openLocationSettings();
+    try {
+      await Geolocator.openLocationSettings();
+    } catch (e) {
+      // Handle error silently
+    }
   }
 
-  /// Open app settings for permission management
+  /// Open app settings
   Future<void> openAppSettings() async {
-    await openAppSettings();
+    try {
+      await openAppSettings();
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
+  /// Get formatted distance string
+  String formatDistance(double distanceInMeters) {
+    if (distanceInMeters < 1000) {
+      return '${distanceInMeters.toStringAsFixed(0)}m';
+    } else {
+      final km = distanceInMeters / 1000;
+      return '${km.toStringAsFixed(1)}km';
+    }
   }
 
   /// Get location accuracy description
-  String getLocationAccuracyDescription(LocationAccuracy accuracy) {
-    switch (accuracy) {
-      case LocationAccuracy.lowest:
-        return 'Lowest (1000m)';
-      case LocationAccuracy.low:
-        return 'Low (500m)';
-      case LocationAccuracy.medium:
-        return 'Medium (100m)';
-      case LocationAccuracy.high:
-        return 'High (10m)';
-      case LocationAccuracy.reduced:
-        return 'Reduced (500m)';
-      case LocationAccuracy.best:
-        return 'Best (1m)';
-      case LocationAccuracy.bestForNavigation:
-        return 'Best for Navigation (1m)';
-    }
-  }
-
-  /// Validate location data for attendance
-  Future<LocationValidationResult> validateLocationForAttendance(
-    Position currentPosition,
-    Position sessionPosition,
-    double allowedRadius,
-  ) async {
-    try {
-      // Check if location is within allowed radius
-      bool isWithinRadius = this.isWithinRadius(
-        currentPosition,
-        sessionPosition,
-        allowedRadius,
-      );
-
-      // Check location accuracy (should be within 50 meters for reliable attendance)
-      bool isAccurateEnough = currentPosition.accuracy <= 50.0;
-
-      return LocationValidationResult(
-        isValid: isWithinRadius && isAccurateEnough,
-        isWithinRadius: isWithinRadius,
-        isAccurateEnough: isAccurateEnough,
-        distance: calculateDistance(
-          currentPosition.latitude,
-          currentPosition.longitude,
-          sessionPosition.latitude,
-          sessionPosition.longitude,
-        ),
-        accuracy: currentPosition.accuracy,
-        message: _getValidationMessage(isWithinRadius, isAccurateEnough),
-      );
-    } catch (e) {
-      return LocationValidationResult(
-        isValid: false,
-        isWithinRadius: false,
-        isAccurateEnough: false,
-        distance: 0,
-        accuracy: 0,
-        message: 'Location validation failed: $e',
-      );
-    }
-  }
-
-  String _getValidationMessage(bool isWithinRadius, bool isAccurateEnough) {
-    if (!isWithinRadius && !isAccurateEnough) {
-      return 'You are too far from the session location and location accuracy is insufficient.';
-    } else if (!isWithinRadius) {
-      return 'You are too far from the session location.';
-    } else if (!isAccurateEnough) {
-      return 'Location accuracy is insufficient. Please wait for better GPS signal.';
+  String getAccuracyDescription(double accuracy) {
+    if (accuracy <= 10) {
+      return 'Excellent';
+    } else if (accuracy <= 20) {
+      return 'Good';
+    } else if (accuracy <= 50) {
+      return 'Fair';
+    } else if (accuracy <= 100) {
+      return 'Poor';
     } else {
-      return 'Location verified successfully.';
+      return 'Very Poor';
     }
   }
 }
 
-class LocationServiceException implements Exception {
-  final String message;
-  LocationServiceException(this.message);
+/// Location data class
+class LocationData {
+  final double latitude;
+  final double longitude;
+  final double accuracy;
 
-  @override
-  String toString() => 'LocationServiceException: $message';
+  LocationData({
+    required this.latitude,
+    required this.longitude,
+    required this.accuracy,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+      'accuracy': accuracy,
+    };
+  }
+
+  factory LocationData.fromMap(Map<String, dynamic> map) {
+    return LocationData(
+      latitude: map['latitude']?.toDouble() ?? 0.0,
+      longitude: map['longitude']?.toDouble() ?? 0.0,
+      accuracy: map['accuracy']?.toDouble() ?? 0.0,
+    );
+  }
 }
 
+/// Location permission result
+class LocationPermissionResult {
+  final bool isSuccess;
+  final String? error;
+
+  LocationPermissionResult._({
+    required this.isSuccess,
+    this.error,
+  });
+
+  factory LocationPermissionResult.success() {
+    return LocationPermissionResult._(isSuccess: true);
+  }
+
+  factory LocationPermissionResult.failure(String error) {
+    return LocationPermissionResult._(isSuccess: false, error: error);
+  }
+}
+
+/// Location result
+class LocationResult {
+  final bool isSuccess;
+  final String? error;
+  final LocationData? location;
+
+  LocationResult._({
+    required this.isSuccess,
+    this.error,
+    this.location,
+  });
+
+  factory LocationResult.success(LocationData location) {
+    return LocationResult._(isSuccess: true, location: location);
+  }
+
+  factory LocationResult.failure(String error) {
+    return LocationResult._(isSuccess: false, error: error);
+  }
+}
+
+/// Location verification result
+class LocationVerificationResult {
+  final bool isSuccess;
+  final String? error;
+  final LocationData? location;
+
+  LocationVerificationResult._({
+    required this.isSuccess,
+    this.error,
+    this.location,
+  });
+
+  factory LocationVerificationResult.success(LocationData location) {
+    return LocationVerificationResult._(isSuccess: true, location: location);
+  }
+
+  factory LocationVerificationResult.failure(String error) {
+    return LocationVerificationResult._(isSuccess: false, error: error);
+  }
+}
+
+/// Location permission status
 enum LocationPermissionStatus {
   disabled,
   denied,
   deniedForever,
-  granted,
-  unknown,
-}
-
-class LocationValidationResult {
-  final bool isValid;
-  final bool isWithinRadius;
-  final bool isAccurateEnough;
-  final double distance;
-  final double accuracy;
-  final String message;
-
-  LocationValidationResult({
-    required this.isValid,
-    required this.isWithinRadius,
-    required this.isAccurateEnough,
-    required this.distance,
-    required this.accuracy,
-    required this.message,
-  });
+  whileInUse,
+  always,
+  unableToDetermine,
+  error,
 }

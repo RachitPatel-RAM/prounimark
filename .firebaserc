@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "unimark-attendance",
+    "staging": "unimark-attendance-staging",
+    "production": "unimark-attendance-prod"
+  },
+  "targets": {},
+  "etags": {}
+}

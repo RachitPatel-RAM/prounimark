@@ -1,12 +1,17 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_functions/firebase_functions.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/user_model.dart';
 import '../models/session_model.dart';
 import '../models/attendance_model.dart';
 import '../models/hierarchy_model.dart';
+import 'auth_service.dart';
+import 'location_service.dart';
+import 'biometric_service.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -379,6 +384,70 @@ class FirebaseService {
       });
     } catch (e) {
       throw Exception('Failed to update attendance: $e');
+    }
+  }
+
+  // Password change method
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('No authenticated user found');
+      }
+
+      // Re-authenticate user with old password
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: oldPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Update password
+      await user.updatePassword(newPassword);
+    } catch (e) {
+      throw Exception('Failed to change password: $e');
+    }
+  }
+
+  // Hierarchy management methods
+  Future<List<BranchModel>> getHierarchy() async {
+    try {
+      final query = await _firestore
+          .collection('branches')
+          .where('isActive', isEqualTo: true)
+          .orderBy('name')
+          .get();
+      
+      return query.docs.map((doc) => BranchModel.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get hierarchy: $e');
+    }
+  }
+
+  Future<void> addHierarchyLevel(BranchModel branch) async {
+    try {
+      await _firestore.collection('branches').add(branch.toFirestore());
+    } catch (e) {
+      throw Exception('Failed to add hierarchy level: $e');
+    }
+  }
+
+  Future<void> updateHierarchyLevel(BranchModel branch) async {
+    try {
+      await _firestore.collection('branches').doc(branch.id).update(branch.toFirestore());
+    } catch (e) {
+      throw Exception('Failed to update hierarchy level: $e');
+    }
+  }
+
+  Future<void> deleteHierarchyLevel(String branchId) async {
+    try {
+      await _firestore.collection('branches').doc(branchId).update({
+        'isActive': false,
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      throw Exception('Failed to delete hierarchy level: $e');
     }
   }
 }

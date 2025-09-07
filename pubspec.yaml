@@ -1,5 +1,5 @@
 name: unimark
-description: A new Flutter project.
+description: UniMark - Secure Attendance Management System
 publish_to: none
 version: 1.0.0+1
 
@@ -7,17 +7,17 @@ environment:
   sdk: ^3.6.0
 
 dependencies:
-  flutter:       # CRITICAL: Required for every Flutter project - DO NOT REMOVE
-    sdk: flutter # CRITICAL: Required for every Flutter project - DO NOT REMOVE
+  flutter:
+    sdk: flutter
   
-  # CRITICAL: Core UI and responsive design - DO NOT REMOVE OR MODIFY
-  sizer: ^2.0.15              # Required for responsive design system
-  flutter_svg: ^2.0.9        # Required for SVG icon support
-  google_fonts: ^6.1.0       # Required for typography (replaces local fonts)
-  shared_preferences: ^2.2.2 # Required for local data storage
+  # Core UI and responsive design
+  sizer: ^2.0.15
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+  shared_preferences: ^2.2.2
   web: ^1.1.1
   
-  # Feature dependencies - safe to modify
+  # Feature dependencies
   cached_network_image: ^3.3.1
   connectivity_plus: ^6.1.4
   dio: ^5.4.0
@@ -35,16 +35,35 @@ dependencies:
   cloud_firestore: ^4.13.6
   firebase_storage: ^11.5.6
   firebase_messaging: ^14.7.10
+  firebase_functions: ^4.5.8
+  firebase_app_check: ^0.2.1+18
+  
+  # Authentication & Security
+  google_sign_in: ^6.2.1
+  local_auth: ^2.1.7
+  flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.3
+  
+  # Location & Device
+  geolocator: ^13.0.4
+  device_info_plus: ^9.1.1
+  package_info_plus: ^8.0.2
   
   # Additional utilities
   uuid: ^4.2.1
   intl: ^0.19.0
-  device_info_plus: ^9.1.1
+  http: ^1.2.1
+  json_annotation: ^4.9.0
+  equatable: ^2.0.5
+  rxdart: ^0.27.7
 
 dev_dependencies:
-  flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
-    sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
-  flutter_lints: ^5.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.9
+  mockito: ^5.4.4
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE

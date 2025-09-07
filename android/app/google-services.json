@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "unimark-app",
-    "storage_bucket": "unimark-app.appspot.com"
+    "project_number": "36244654330",
+    "project_id": "unimark-ffb10",
+    "storage_bucket": "unimark-ffb10.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:36244654330:android:8cb694a5a34eb78147e143",
         "android_client_info": {
-          "package_name": "com.unimark.app"
+          "package_name": "com.unimark.attendance"
         }
       },
       "oauth_client": [
         {
-          "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+          "client_id": "36244654330-tr7dcuaqgjots2iadgmpq71bde5bo2gt.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyKeyForDevelopment123456789"
+          "current_key": "AIzaSyA_o7mQC-KbyxK6iFZ28IrsvnGpzLw1L-0"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+              "client_id": "36244654330-tr7dcuaqgjots2iadgmpq71bde5bo2gt.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
