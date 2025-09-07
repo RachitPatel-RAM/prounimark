@@ -38,6 +38,24 @@ class BranchModel {
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
+
+  BranchModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return BranchModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 class ClassModel {

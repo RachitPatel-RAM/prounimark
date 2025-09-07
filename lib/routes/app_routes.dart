@@ -11,6 +11,7 @@ import '../presentation/mark_attendance_screen/mark_attendance_screen.dart';
 import '../presentation/profile_management_screen/profile_management_screen.dart';
 import '../presentation/manage_hierarchy_screen/manage_hierarchy_screen.dart';
 import '../models/user_model.dart';
+import '../models/session_model.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
@@ -51,8 +52,53 @@ class AppRoutes {
         updatedAt: DateTime.now(),
       ),
     ),
-    attendanceHistory: (context) => const AttendanceHistoryScreen(),
-    markAttendance: (context) => const MarkAttendanceScreen(),
+    attendanceHistory: (context) => AttendanceHistoryScreen(
+      currentUser: UserModel(
+        id: 'temp_user',
+        name: 'Current User',
+        email: 'user@unimark.com',
+        role: UserRole.student,
+        enrollmentNumber: 'STU001',
+        branch: 'Computer Science',
+        className: 'CS-A',
+        batch: '2024',
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    ),
+    markAttendance: (context) => MarkAttendanceScreen(
+      session: SessionModel(
+        id: 'temp_session',
+        facultyId: 'faculty_001',
+        facultyName: 'Sample Faculty',
+        branch: 'Computer Science',
+        className: 'CS-A',
+        batches: ['2024'],
+        subject: 'Sample Subject',
+        location: LocationData(latitude: 0.0, longitude: 0.0),
+        radius: 100,
+        code: 'SAMPLE123',
+        startTime: DateTime.now(),
+        endTime: DateTime.now().add(const Duration(hours: 1)),
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      currentUser: UserModel(
+        id: 'temp_user',
+        name: 'Current User',
+        email: 'user@unimark.com',
+        role: UserRole.student,
+        enrollmentNumber: 'STU001',
+        branch: 'Computer Science',
+        className: 'CS-A',
+        batch: '2024',
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    ),
     profileManagement: (context) => const ProfileManagementScreen(),
     manageHierarchy: (context) => const ManageHierarchyScreen(),
     // TODO: Add your other routes here
