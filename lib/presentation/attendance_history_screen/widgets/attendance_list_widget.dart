@@ -8,10 +8,10 @@ class AttendanceListWidget extends StatelessWidget {
   final bool showAll;
 
   const AttendanceListWidget({
-    Key? key,
+    super.key,
     required this.attendanceList,
     this.showAll = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +109,7 @@ class AttendanceListWidget extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(2.w),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
+              color: Color.fromRGBO((statusColor.r * 255.0).round() & 0xff, (statusColor.g * 255.0).round() & 0xff, (statusColor.b * 255.0).round() & 0xff, 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -160,7 +160,7 @@ class AttendanceListWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
               decoration: BoxDecoration(
-                color: AppTheme.warningLight.withOpacity(0.1),
+                color: Color.fromRGBO((AppTheme.warningLight.r * 255.0).round() & 0xff, (AppTheme.warningLight.g * 255.0).round() & 0xff, (AppTheme.warningLight.b * 255.0).round() & 0xff, 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

@@ -14,7 +14,7 @@ import './widgets/session_settings_widget.dart';
 import './widgets/subject_selection_widget.dart';
 
 class CreateAttendanceSessionScreen extends StatefulWidget {
-  const CreateAttendanceSessionScreen({Key? key}) : super(key: key);
+  const CreateAttendanceSessionScreen({super.key});
 
   @override
   State<CreateAttendanceSessionScreen> createState() =>

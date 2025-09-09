@@ -1,15 +1,14 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
-import '../config/firebase_config.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -17,7 +16,10 @@ class AuthService {
   AuthService._internal();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
+    serverClientId: '36244654330-tr7dcuaqgjots2iadgmpq71bde5bo2gt.apps.googleusercontent.com',
+  );
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // final FirebaseFunctions _functions = FirebaseFunctions.instance; // Discontinued
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -57,6 +59,12 @@ class AuthService {
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
+      // Validate authentication tokens
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        await _googleSignIn.signOut();
+        return AuthResult.failure('Failed to obtain authentication tokens');
+      }
+
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -77,8 +85,46 @@ class AuthService {
       final userModel = UserModel.fromFirestore(userDoc);
       return AuthResult.success(userModel);
 
+    } on PlatformException catch (e) {
+      // Handle specific Google Sign-In errors
+      String errorMessage = 'Google sign-in failed';
+      
+      if (e.code == 'sign_in_failed') {
+        if (e.message?.contains('ApiException: 10') == true) {
+          errorMessage = 'Google Sign-In configuration error. Please contact support.';
+        } else if (e.message?.contains('ApiException: 7') == true) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else if (e.message?.contains('ApiException: 12501') == true) {
+          errorMessage = 'Sign-in was cancelled by user.';
+        } else {
+          errorMessage = 'Google Sign-In failed: ${e.message}';
+        }
+      }
+      
+      return AuthResult.failure(errorMessage);
     } catch (e) {
       return AuthResult.failure('Google sign-in failed: $e');
+    }
+  }
+
+  /// Faculty login with Google SSO
+  Future<AuthResult> facultyLoginWithGoogle() async {
+    try {
+      // Use regular Google Sign-In
+      final result = await signInWithGoogle();
+      
+      // If successful, verify faculty role
+      if (result.isSuccess && result.user != null) {
+        if (result.user!.role != UserRole.faculty) {
+          // User is not faculty, sign them out
+          await signOut();
+          return AuthResult.failure('Access denied. Faculty role required.');
+        }
+      }
+      
+      return result;
+    } catch (e) {
+      return AuthResult.failure('Faculty login failed: $e');
     }
   }
 
@@ -107,6 +153,46 @@ class AuthService {
 
     } catch (e) {
       return AuthResult.failure('Admin login failed: $e');
+    }
+  }
+
+  /// Create faculty user (admin only)
+  Future<AuthResult> createFacultyUser({
+    required String email,
+    required String name,
+    required String branchId,
+    String? phone,
+  }) async {
+    try {
+      // Check if user already exists
+      final existingUser = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (existingUser.docs.isNotEmpty) {
+        return AuthResult.failure('Faculty user with this email already exists');
+      }
+
+      // Create faculty user document
+      final facultyUser = UserModel(
+        id: 'faculty_${DateTime.now().millisecondsSinceEpoch}',
+        name: name,
+        email: email,
+        role: UserRole.faculty,
+        branch: branchId,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Store in Firestore
+      await _firestore.collection('users').doc(facultyUser.id).set(facultyUser.toFirestore());
+      
+      return AuthResult.success(facultyUser);
+
+    } catch (e) {
+      return AuthResult.failure('Failed to create faculty user: $e');
     }
   }
 
@@ -172,6 +258,40 @@ class AuthService {
       return UserModel.fromFirestore(userDoc);
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Get all faculty users (admin only)
+  Future<List<UserModel>> getAllFacultyUsers() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'faculty')
+          .orderBy('name')
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all student users (admin only)
+  Future<List<UserModel>> getAllStudentUsers() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'student')
+          .orderBy('name')
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 

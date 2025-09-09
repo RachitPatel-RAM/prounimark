@@ -9,7 +9,7 @@ import './widgets/quick_filter_widget.dart';
 import './widgets/upcoming_class_card.dart';
 
 class FacultyDashboard extends StatefulWidget {
-  const FacultyDashboard({Key? key}) : super(key: key);
+  const FacultyDashboard({super.key});
 
   @override
   State<FacultyDashboard> createState() => _FacultyDashboardState();
@@ -517,18 +517,20 @@ class _FacultyDashboardState extends State<FacultyDashboard>
         // _isRefreshing = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Dashboard refreshed successfully',
-          style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white,
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Dashboard refreshed successfully',
+            style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+            ),
           ),
+          backgroundColor: AppTheme.getSuccessColor(true),
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: AppTheme.getSuccessColor(true),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+    }
   }
 
   void _handleFilterChanged(String filter) {

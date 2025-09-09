@@ -9,12 +9,12 @@ class AttendanceSubmissionWidget extends StatelessWidget {
   final VoidCallback onSubmit;
 
   const AttendanceSubmissionWidget({
-    Key? key,
+    super.key,
     required this.isLoading,
     required this.isLocationVerified,
     required this.isCodeVerified,
     required this.onSubmit,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -104,9 +104,9 @@ class AttendanceSubmissionWidget extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
-                  color: AppTheme.warningLight.withOpacity(0.1),
+                  color: Color.fromRGBO((AppTheme.warningLight.r * 255.0).round() & 0xff, (AppTheme.warningLight.g * 255.0).round() & 0xff, (AppTheme.warningLight.b * 255.0).round() & 0xff, 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.warningLight.withOpacity(0.3)),
+                  border: Border.all(color: Color.fromRGBO((AppTheme.warningLight.r * 255.0).round() & 0xff, (AppTheme.warningLight.g * 255.0).round() & 0xff, (AppTheme.warningLight.b * 255.0).round() & 0xff, 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -143,12 +143,12 @@ class AttendanceSubmissionWidget extends StatelessWidget {
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
         color: isVerified 
-            ? Colors.green.withOpacity(0.1)
+            ? const Color.fromRGBO(0, 255, 0, 0.1)
             : AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isVerified 
-              ? Colors.green.withOpacity(0.3)
+              ? const Color.fromRGBO(0, 255, 0, 0.3)
               : AppTheme.dividerLight,
         ),
       ),

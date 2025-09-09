@@ -8,10 +8,10 @@ class SubjectSelectionWidget extends StatefulWidget {
   final Function(String?) onSubjectChanged;
 
   const SubjectSelectionWidget({
-    Key? key,
+    super.key,
     this.selectedSubject,
     required this.onSubjectChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<SubjectSelectionWidget> createState() => _SubjectSelectionWidgetState();

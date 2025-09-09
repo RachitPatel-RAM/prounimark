@@ -14,9 +14,9 @@ class AdminDashboardScreen extends StatefulWidget {
   final UserModel currentUser;
 
   const AdminDashboardScreen({
-    Key? key,
+    super.key,
     required this.currentUser,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
@@ -36,7 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   int _totalBranches = 0;
   int _totalClasses = 0;
   int _totalBatches = 0;
-  int _activeSessions = 0;
+  final int _activeSessions = 0;
 
   @override
   void initState() {
@@ -249,9 +249,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              navigator.pop();
               await _firebaseService.signOut();
-              Navigator.of(context).pushReplacementNamed('/login');
+              navigator.pushReplacementNamed('/login');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorLight,

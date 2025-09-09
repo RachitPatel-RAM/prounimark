@@ -8,11 +8,11 @@ class AttendanceCodeInputWidget extends StatelessWidget {
   final Function(String) onCodeChanged;
 
   const AttendanceCodeInputWidget({
-    Key? key,
+    super.key,
     required this.controller,
     required this.isCodeVerified,
     required this.onCodeChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +47,8 @@ class AttendanceCodeInputWidget extends StatelessWidget {
                     padding: EdgeInsets.all(1.w),
                     decoration: BoxDecoration(
                       color: isCodeVerified 
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                          ? const Color.fromRGBO(0, 255, 0, 0.1)
+                          : const Color.fromRGBO(255, 0, 0, 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
@@ -138,9 +138,9 @@ class AttendanceCodeInputWidget extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: const Color.fromRGBO(255, 0, 0, 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: const Color.fromRGBO(255, 0, 0, 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -166,9 +166,9 @@ class AttendanceCodeInputWidget extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(3.w),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: const Color.fromRGBO(0, 255, 0, 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  border: Border.all(color: const Color.fromRGBO(0, 255, 0, 0.3)),
                 ),
                 child: Row(
                   children: [

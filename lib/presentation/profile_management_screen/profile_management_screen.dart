@@ -12,9 +12,9 @@ class ProfileManagementScreen extends StatefulWidget {
   final UserModel? currentUser;
 
   const ProfileManagementScreen({
-    Key? key,
+    super.key,
     this.currentUser,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfileManagementScreen> createState() => _ProfileManagementScreenState();
@@ -39,10 +39,10 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
       name: 'Current User',
       email: 'user@unimark.com',
       role: UserRole.student,
-      enrollmentNumber: 'STU001',
+      enrollmentNo: 'STU001',
       branch: 'Computer Science',
-      className: 'CS-A',
-      batch: '2024',
+      classId: 'CS-A',
+      batchId: '2024',
       isActive: true,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -53,21 +53,25 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     setState(() => _isLoading = true);
     try {
       await _firebaseService.updateUser(updatedUser);
-      setState(() {
-        _currentUser = updatedUser;
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _currentUser = updatedUser;
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to update profile: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to update profile: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -75,32 +79,40 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
     setState(() => _isLoading = true);
     try {
       await _firebaseService.changePassword(oldPassword, newPassword);
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password changed successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password changed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to change password: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to change password: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _logout() async {
     try {
       await _firebaseService.signOut();
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        '/login-screen',
-        (route) => false,
-      );
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login-screen',
+          (route) => false,
+        );
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to logout: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to logout: $e';
+        });
+      }
     }
   }
 
@@ -205,9 +217,34 @@ class _ProfileManagementScreenState extends State<ProfileManagementScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement account deletion
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              navigator.pop();
+              try {
+                await _firebaseService.deleteUser(_currentUser.id);
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Account deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  navigator.pushNamedAndRemoveUntil(
+                    '/login-screen',
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete account: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -244,10 +281,10 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.currentUser.name);
     _emailController = TextEditingController(text: widget.currentUser.email);
-    _enrollmentController = TextEditingController(text: widget.currentUser.enrollmentNumber ?? '');
+    _enrollmentController = TextEditingController(text: widget.currentUser.enrollmentNo ?? '');
     _branchController = TextEditingController(text: widget.currentUser.branch ?? '');
-    _classNameController = TextEditingController(text: widget.currentUser.className ?? '');
-    _batchController = TextEditingController(text: widget.currentUser.batch ?? '');
+    _classNameController = TextEditingController(text: widget.currentUser.classId ?? '');
+    _batchController = TextEditingController(text: widget.currentUser.batchId ?? '');
   }
 
   @override
@@ -329,10 +366,10 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
             final updatedUser = widget.currentUser.copyWith(
               name: _nameController.text,
               email: _emailController.text,
-              enrollmentNumber: _enrollmentController.text,
+              enrollmentNo: _enrollmentController.text,
               branch: _branchController.text,
-              className: _classNameController.text,
-              batch: _batchController.text,
+              classId: _classNameController.text,
+              batchId: _batchController.text,
               updatedAt: DateTime.now(),
             );
             widget.onUpdate(updatedUser);

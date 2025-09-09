@@ -14,7 +14,7 @@ class ActiveSessionCard extends StatelessWidget {
   final VoidCallback? onSendNotifications;
 
   const ActiveSessionCard({
-    Key? key,
+    super.key,
     required this.sessionData,
     this.onEndSession,
     this.onEditSession,
@@ -22,7 +22,7 @@ class ActiveSessionCard extends StatelessWidget {
     this.onDuplicateSession,
     this.onExportAttendance,
     this.onSendNotifications,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

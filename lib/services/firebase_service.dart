@@ -260,6 +260,22 @@ class FirebaseService {
     }
   }
 
+  Future<void> updateBranch(BranchModel branch) async {
+    try {
+      await _firestore.collection('branches').doc(branch.id).update(branch.toFirestore());
+    } catch (e) {
+      throw Exception('Failed to update branch: $e');
+    }
+  }
+
+  Future<void> deleteBranch(String branchId) async {
+    try {
+      await _firestore.collection('branches').doc(branchId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete branch: $e');
+    }
+  }
+
   Future<String> createClass(ClassModel classModel) async {
     try {
       final docRef = await _firestore.collection('classes').add(classModel.toFirestore());
@@ -305,6 +321,38 @@ class FirebaseService {
       return query.docs.map((doc) => BatchModel.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get batches: $e');
+    }
+  }
+
+  Future<void> updateClass(ClassModel classModel) async {
+    try {
+      await _firestore.collection('classes').doc(classModel.id).update(classModel.toFirestore());
+    } catch (e) {
+      throw Exception('Failed to update class: $e');
+    }
+  }
+
+  Future<void> deleteClass(String classId) async {
+    try {
+      await _firestore.collection('classes').doc(classId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete class: $e');
+    }
+  }
+
+  Future<void> updateBatch(BatchModel batch) async {
+    try {
+      await _firestore.collection('batches').doc(batch.id).update(batch.toFirestore());
+    } catch (e) {
+      throw Exception('Failed to update batch: $e');
+    }
+  }
+
+  Future<void> deleteBatch(String batchId) async {
+    try {
+      await _firestore.collection('batches').doc(batchId).delete();
+    } catch (e) {
+      throw Exception('Failed to delete batch: $e');
     }
   }
 

@@ -7,9 +7,9 @@ class SessionInfoWidget extends StatelessWidget {
   final SessionModel session;
 
   const SessionInfoWidget({
-    Key? key,
+    super.key,
     required this.session,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class SessionInfoWidget extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               AppTheme.primaryLight,
-              AppTheme.primaryLight.withOpacity(0.8),
+              Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.8),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -54,7 +54,7 @@ class SessionInfoWidget extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: const Color.fromRGBO(255, 255, 255, 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -101,7 +101,7 @@ class SessionInfoWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(3.w),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: const Color.fromRGBO(255, 255, 255, 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -138,14 +138,14 @@ class SessionInfoWidget extends StatelessWidget {
       children: [
         Icon(
           icon,
-          color: Colors.white.withOpacity(0.8),
+          color: const Color.fromRGBO(255, 255, 255, 0.8),
           size: 4.w,
         ),
         SizedBox(width: 2.w),
         Text(
           '$label: ',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: const Color.fromRGBO(255, 255, 255, 0.8),
             fontWeight: FontWeight.w500,
           ),
         ),

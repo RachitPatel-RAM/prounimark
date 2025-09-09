@@ -29,7 +29,11 @@ ClassModel _$ClassModelFromJson(Map<String, dynamic> json) => ClassModel(
   id: json['id'] as String,
   branchId: json['branchId'] as String,
   name: json['name'] as String,
+  description: json['description'] as String?,
   createdAt: DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
   isActive: json['isActive'] as bool? ?? true,
 );
 
@@ -38,7 +42,9 @@ Map<String, dynamic> _$ClassModelToJson(ClassModel instance) =>
       'id': instance.id,
       'branchId': instance.branchId,
       'name': instance.name,
+      'description': instance.description,
       'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
       'isActive': instance.isActive,
     };
 
@@ -46,7 +52,11 @@ BatchModel _$BatchModelFromJson(Map<String, dynamic> json) => BatchModel(
   id: json['id'] as String,
   classId: json['classId'] as String,
   name: json['name'] as String,
+  description: json['description'] as String?,
   createdAt: DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
   isActive: json['isActive'] as bool? ?? true,
 );
 
@@ -55,7 +65,9 @@ Map<String, dynamic> _$BatchModelToJson(BatchModel instance) =>
       'id': instance.id,
       'classId': instance.classId,
       'name': instance.name,
+      'description': instance.description,
       'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
       'isActive': instance.isActive,
     };
 

@@ -6,9 +6,9 @@ class SecuritySettingsWidget extends StatelessWidget {
   final Function(String oldPassword, String newPassword) onChangePassword;
 
   const SecuritySettingsWidget({
-    Key? key,
+    super.key,
     required this.onChangePassword,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +93,7 @@ class SecuritySettingsWidget extends StatelessWidget {
         padding: EdgeInsets.all(3.w),
         decoration: BoxDecoration(
           border: Border.all(
-            color: AppTheme.primaryLight.withOpacity(0.2),
+            color: Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.2),
             width: 1,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -103,7 +103,7 @@ class SecuritySettingsWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(2.w),
               decoration: BoxDecoration(
-                color: AppTheme.primaryLight.withOpacity(0.1),
+                color: Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

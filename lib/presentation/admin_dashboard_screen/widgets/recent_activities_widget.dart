@@ -3,7 +3,7 @@ import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
 
 class RecentActivitiesWidget extends StatelessWidget {
-  const RecentActivitiesWidget({Key? key}) : super(key: key);
+  const RecentActivitiesWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -7,9 +7,9 @@ class TodayScheduleCard extends StatelessWidget {
   final List<Map<String, dynamic>> scheduleItems;
 
   const TodayScheduleCard({
-    Key? key,
+    super.key,
     required this.scheduleItems,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +47,7 @@ class TodayScheduleCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                DateTime.now().day.toString().padLeft(2, '0') +
-                    '/' +
-                    DateTime.now().month.toString().padLeft(2, '0') +
-                    '/' +
-                    DateTime.now().year.toString(),
+                '${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
                 style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
                   color: AppTheme.lightTheme.colorScheme.onSurface
                       .withValues(alpha: 0.7),

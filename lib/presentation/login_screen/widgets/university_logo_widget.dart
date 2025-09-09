@@ -4,7 +4,7 @@ import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
 
 class UniversityLogoWidget extends StatelessWidget {
-  const UniversityLogoWidget({Key? key}) : super(key: key);
+  const UniversityLogoWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

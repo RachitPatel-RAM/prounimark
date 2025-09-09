@@ -10,12 +10,12 @@ class QuickFilterWidget extends StatelessWidget {
   final List<String> batches;
 
   const QuickFilterWidget({
-    Key? key,
+    super.key,
     required this.selectedFilter,
     required this.onFilterChanged,
     required this.subjects,
     required this.batches,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

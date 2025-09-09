@@ -10,12 +10,12 @@ class AttendanceStatsCard extends StatelessWidget {
   final int totalDays;
 
   const AttendanceStatsCard({
-    Key? key,
+    super.key,
     required this.attendancePercentage,
     required this.presentDays,
     required this.absentDays,
     required this.totalDays,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

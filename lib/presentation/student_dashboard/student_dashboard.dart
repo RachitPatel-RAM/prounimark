@@ -11,7 +11,7 @@ import 'widgets/student_header_widget.dart';
 import 'widgets/today_schedule_card.dart';
 
 class StudentDashboard extends StatefulWidget {
-  const StudentDashboard({Key? key}) : super(key: key);
+  const StudentDashboard({super.key});
 
   @override
   State<StudentDashboard> createState() => _StudentDashboardState();
@@ -116,7 +116,9 @@ class _StudentDashboardState extends State<StudentDashboard> with TickerProvider
       if (permission == LocationPermission.whileInUse || 
           permission == LocationPermission.always) {
         final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
         );
         setState(() {
           _isLocationEnabled = true;

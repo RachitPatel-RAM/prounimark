@@ -3,22 +3,22 @@ import 'package:sizer/sizer.dart';
 import 'package:intl/intl.dart';
 import '../../../core/app_export.dart';
 import '../../../models/user_model.dart';
-import '../../../services/firebase_service.dart';
+import '../../../services/auth_service.dart';
 
 class UserManagementWidget extends StatefulWidget {
   final VoidCallback onRefresh;
 
   const UserManagementWidget({
-    Key? key,
+    super.key,
     required this.onRefresh,
-  }) : super(key: key);
+  });
 
   @override
   State<UserManagementWidget> createState() => _UserManagementWidgetState();
 }
 
 class _UserManagementWidgetState extends State<UserManagementWidget> {
-  final FirebaseService _firebaseService = FirebaseService();
+  final AuthService _authService = AuthService();
   
   List<UserModel> _users = [];
   bool _isLoading = true;
@@ -39,9 +39,12 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
     });
 
     try {
-      final users = await _firebaseService.getAllUsers();
+      // Load both students and faculty
+      final students = await _authService.getAllStudentUsers();
+      final faculty = await _authService.getAllFacultyUsers();
+      
       setState(() {
-        _users = users;
+        _users = [...students, ...faculty];
         _isLoading = false;
       });
     } catch (e) {
@@ -73,6 +76,34 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Header with Create Faculty Button
+        Container(
+          padding: EdgeInsets.all(4.w),
+          color: AppTheme.surfaceLight,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'User Management',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimaryLight,
+                  ),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _createFacultyUser,
+                icon: const Icon(Icons.person_add),
+                label: const Text('Create Faculty'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryLight,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
         // Search and Filter Bar
         Container(
           padding: EdgeInsets.all(4.w),
@@ -200,7 +231,7 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
           _filterRole = selected ? role : null;
         });
       },
-      selectedColor: AppTheme.primaryLight.withOpacity(0.2),
+      selectedColor: Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.2),
       checkmarkColor: AppTheme.primaryLight,
       labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: isSelected ? AppTheme.primaryLight : AppTheme.textSecondaryLight,
@@ -229,7 +260,7 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
               children: [
                 CircleAvatar(
                   radius: 20.sp,
-                  backgroundColor: _getRoleColor(user.role).withOpacity(0.2),
+                  backgroundColor: Color.fromRGBO((_getRoleColor(user.role).r * 255.0).round() & 0xff, (_getRoleColor(user.role).g * 255.0).round() & 0xff, (_getRoleColor(user.role).b * 255.0).round() & 0xff, 0.2),
                   child: Icon(
                     _getRoleIcon(user.role),
                     color: _getRoleColor(user.role),
@@ -260,10 +291,10 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 1.h),
                   decoration: BoxDecoration(
-                    color: _getRoleColor(user.role).withOpacity(0.1),
+                    color: Color.fromRGBO((_getRoleColor(user.role).r * 255.0).round() & 0xff, (_getRoleColor(user.role).g * 255.0).round() & 0xff, (_getRoleColor(user.role).b * 255.0).round() & 0xff, 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: _getRoleColor(user.role).withOpacity(0.3),
+                      color: Color.fromRGBO((_getRoleColor(user.role).r * 255.0).round() & 0xff, (_getRoleColor(user.role).g * 255.0).round() & 0xff, (_getRoleColor(user.role).b * 255.0).round() & 0xff, 0.3),
                     ),
                   ),
                   child: Text(
@@ -423,11 +454,103 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
   }
 
   void _editUser(UserModel user) {
-    // TODO: Implement edit user functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit user functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    final nameController = TextEditingController(text: user.name);
+    final emailController = TextEditingController(text: user.email);
+    UserRole selectedRole = user.role;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit User'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 2.h),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              SizedBox(height: 2.h),
+              DropdownButtonFormField<UserRole>(
+                initialValue: selectedRole,
+                decoration: const InputDecoration(
+                  labelText: 'Role',
+                  border: OutlineInputBorder(),
+                ),
+                items: UserRole.values.map((role) {
+                  return DropdownMenuItem(
+                    value: role,
+                    child: Text(_getRoleText(role)),
+                  );
+                }).toList(),
+                onChanged: (UserRole? newRole) {
+                  if (newRole != null) {
+                    selectedRole = newRole;
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty || emailController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all required fields'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              try {
+                // Note: Update user functionality needs to be implemented in AuthService
+                // For now, we'll just show a message
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Update functionality needs to be implemented in AuthService'),
+                      backgroundColor: AppTheme.warningLight,
+                    ),
+                  );
+                }
+              } catch (e) {
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
@@ -445,24 +568,29 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              navigator.pop();
               try {
-                await _firebaseService.deleteUser(user.id);
-                _loadUsers();
-                widget.onRefresh();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${user.name} deleted successfully'),
-                    backgroundColor: AppTheme.successLight,
-                  ),
-                );
+                // Note: In a real app, you'd need to implement deleteUser in AuthService
+                // For now, we'll just show a message
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Delete functionality needs to be implemented in AuthService'),
+                      backgroundColor: AppTheme.warningLight,
+                    ),
+                  );
+                }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to delete user: $e'),
-                    backgroundColor: AppTheme.errorLight,
-                  ),
-                );
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete user: $e'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(
@@ -470,6 +598,141 @@ class _UserManagementWidgetState extends State<UserManagementWidget> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _createFacultyUser() {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final branchController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Faculty User'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 2.h),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email (@darshan.ac.in) *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              SizedBox(height: 2.h),
+              TextField(
+                controller: branchController,
+                decoration: const InputDecoration(
+                  labelText: 'Branch *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 2.h),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final email = emailController.text.trim();
+              final branch = branchController.text.trim();
+              final phone = phoneController.text.trim();
+
+              if (name.isEmpty || email.isEmpty || branch.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all required fields'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              if (!email.endsWith('@darshan.ac.in')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Email must be from @darshan.ac.in domain'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              try {
+                final result = await _authService.createFacultyUser(
+                  email: email,
+                  name: name,
+                  branchId: branch,
+                  phone: phone.isNotEmpty ? phone : null,
+                );
+
+                navigator.pop();
+                
+                if (result.isSuccess) {
+                  _loadUsers();
+                  widget.onRefresh();
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Faculty user "$name" created successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(result.error ?? 'Failed to create faculty user'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating faculty user: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
           ),
         ],
       ),

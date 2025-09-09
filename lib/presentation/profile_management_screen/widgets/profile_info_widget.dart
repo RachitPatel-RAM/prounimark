@@ -7,9 +7,9 @@ class ProfileInfoWidget extends StatelessWidget {
   final UserModel user;
 
   const ProfileInfoWidget({
-    Key? key,
+    super.key,
     required this.user,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +119,7 @@ class ProfileInfoWidget extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(2.w),
             decoration: BoxDecoration(
-              color: AppTheme.primaryLight.withOpacity(0.1),
+              color: Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

@@ -8,10 +8,10 @@ class UpcomingClassCard extends StatelessWidget {
   final VoidCallback? onCreateSession;
 
   const UpcomingClassCard({
-    Key? key,
+    super.key,
     required this.classData,
     this.onCreateSession,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -8,11 +8,11 @@ class QuickActionsWidget extends StatelessWidget {
   final VoidCallback onViewActivities;
 
   const QuickActionsWidget({
-    Key? key,
+    super.key,
     required this.onManageUsers,
     required this.onManageHierarchy,
     required this.onViewActivities,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +139,9 @@ class QuickActionsWidget extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(3.w),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: Color.fromRGBO((color.r * 255.0).round() & 0xff, (color.g * 255.0).round() & 0xff, (color.b * 255.0).round() & 0xff, 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: Color.fromRGBO((color.r * 255.0).round() & 0xff, (color.g * 255.0).round() & 0xff, (color.b * 255.0).round() & 0xff, 0.3)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

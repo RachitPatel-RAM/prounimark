@@ -4,10 +4,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../core/app_export.dart';
 import '../../models/session_model.dart';
-import '../../models/attendance_model.dart';
 import '../../models/user_model.dart';
-import '../../services/firebase_service.dart';
 import '../../services/attendance_service.dart';
+import '../../services/location_service.dart' as location_service;
 import 'widgets/attendance_code_input_widget.dart';
 import 'widgets/location_verification_widget.dart';
 import 'widgets/session_info_widget.dart';
@@ -28,13 +27,14 @@ class MarkAttendanceScreen extends StatefulWidget {
 }
 
 class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
+  final AttendanceService _attendanceService = AttendanceService();
+  final location_service.LocationService _locationService = location_service.LocationService();
   final TextEditingController _codeController = TextEditingController();
   
   bool _isLoading = false;
   bool _isLocationVerified = false;
   bool _isCodeVerified = false;
-  Position? _currentPosition;
+  location_service.LocationData? _currentLocation;
   String _errorMessage = '';
 
   @override
@@ -88,12 +88,19 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoading = true);
     try {
-      final position = await _firebaseService.getCurrentLocation();
-      setState(() {
-        _currentPosition = position;
-        _isLocationVerified = _verifyLocation(position);
-        _isLoading = false;
-      });
+      final locationResult = await _locationService.getCurrentLocation();
+      if (locationResult.isSuccess && locationResult.location != null) {
+        setState(() {
+          _currentLocation = locationResult.location!;
+          _isLocationVerified = _verifyLocation(locationResult.location!);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = locationResult.error ?? 'Failed to get location';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to get location: $e';
@@ -102,20 +109,12 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     }
   }
 
-  bool _verifyLocation(Position position) {
-    if (_currentPosition == null) return false;
-    
-    final studentLocation = LocationData(
-      latitude: position.latitude,
-      longitude: position.longitude,
+  bool _verifyLocation(location_service.LocationData location) {
+    return _locationService.isWithinRadius(
+      location,
+      widget.session.facultyLocation,
+      widget.session.gpsRadiusM.toDouble(),
     );
-    
-    final sessionLocation = LocationData(
-      latitude: widget.session.facultyLocation.lat,
-      longitude: widget.session.facultyLocation.lng,
-    );
-    final distance = studentLocation.distanceTo(sessionLocation);
-    return distance <= widget.session.gpsRadiusM;
   }
 
   void _verifyCode(String code) {
@@ -130,7 +129,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   }
 
   Future<void> _submitAttendance() async {
-    if (!_isCodeVerified || !_isLocationVerified || _currentPosition == null) {
+    if (!_isCodeVerified || !_isLocationVerified || _currentLocation == null) {
       Fluttertoast.showToast(
         msg: 'Please verify your location and attendance code first.',
         toastLength: Toast.LENGTH_LONG,
@@ -144,12 +143,9 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
     try {
       // Check if already marked attendance
-      final existingAttendance = await _firebaseService.getAttendance(
-        widget.session.id,
-        widget.currentUser.id,
-      );
+      final hasSubmitted = await _attendanceService.hasAlreadySubmitted(widget.session.id);
 
-      if (existingAttendance != null) {
+      if (hasSubmitted) {
         Fluttertoast.showToast(
           msg: 'You have already marked attendance for this session.',
           toastLength: Toast.LENGTH_LONG,
@@ -161,21 +157,31 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       }
 
       // Use attendance service for submission
-      final attendanceService = AttendanceService();
-      final result = await attendanceService.submitAttendance(
+      final result = await _attendanceService.submitAttendance(
         sessionId: widget.session.id,
         responseCode: int.parse(_codeController.text),
         useBiometric: false,
       );
 
-      Fluttertoast.showToast(
-        msg: 'Attendance marked successfully!',
-        toastLength: Toast.LENGTH_LONG,
-        backgroundColor: AppTheme.successLight,
-        textColor: Colors.white,
-      );
+      if (result.isSuccess) {
+        Fluttertoast.showToast(
+          msg: result.message ?? 'Attendance marked successfully!',
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: AppTheme.successLight,
+          textColor: Colors.white,
+        );
 
-      Navigator.of(context).pop(true); // Return true to indicate success
+        if (mounted) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+        }
+      } else {
+        Fluttertoast.showToast(
+          msg: result.error ?? 'Failed to mark attendance',
+          toastLength: Toast.LENGTH_LONG,
+          backgroundColor: AppTheme.errorLight,
+          textColor: Colors.white,
+        );
+      }
     } catch (e) {
       Fluttertoast.showToast(
         msg: 'Failed to mark attendance: $e',
@@ -223,10 +229,10 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                   latitude: widget.session.facultyLocation.lat,
                   longitude: widget.session.facultyLocation.lng,
                 ),
-                currentLocation: _currentPosition != null 
+                currentLocation: _currentLocation != null 
                     ? LocationData(
-                        latitude: _currentPosition!.latitude,
-                        longitude: _currentPosition!.longitude,
+                        latitude: _currentLocation!.latitude,
+                        longitude: _currentLocation!.longitude,
                       )
                     : null,
                 radius: widget.session.gpsRadiusM,

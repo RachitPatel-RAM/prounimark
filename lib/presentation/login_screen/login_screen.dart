@@ -3,13 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../services/auth_service.dart';
+import '../../services/location_validation_service.dart';
+import '../../models/user_model.dart';
 import 'widgets/login_button_widget.dart';
 import 'widgets/login_form_widget.dart';
 import 'widgets/role_selector_widget.dart';
 import 'widgets/university_logo_widget.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -17,6 +20,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
+  // Services
+  final AuthService _authService = AuthService();
+  final LocationValidationService _locationService = LocationValidationService();
+  
   // Controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -42,20 +49,10 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Mock credentials for demonstration
-  final Map<String, Map<String, String>> _mockCredentials = {
-    'Admin': {
-      'username': 'ADMIN404',
-      'password': 'ADMIN9090@@@@',
-    },
-    'Student': {
-      'email': 'student@darshan.ac.in',
-      'password': 'Student123!',
-    },
-    'Faculty': {
-      'email': 'faculty@darshan.ac.in',
-      'password': 'Faculty123!',
-    },
+  // Admin credentials (static)
+  final Map<String, String> _adminCredentials = {
+    'username': 'ADMIN404',
+    'password': 'ADMIN9090@@@@',
   };
 
   @override
@@ -221,82 +218,94 @@ class _LoginScreenState extends State<LoginScreen>
     HapticFeedback.lightImpact();
 
     try {
-      // Simulate authentication delay
-      await Future.delayed(const Duration(seconds: 2));
-
-      bool isAuthenticated = false;
-      String errorMessage = '';
-
-      if (_selectedRole == 'Admin') {
-        final mockAdmin = _mockCredentials['Admin']!;
-        if (_adminUsernameController.text == mockAdmin['username'] &&
-            _adminPasswordController.text == mockAdmin['password']) {
-          isAuthenticated = true;
-        } else {
-          errorMessage =
-              'Invalid admin credentials. Please check username and password.';
-        }
-      } else {
-        final mockUser = _mockCredentials[_selectedRole]!;
-        if (_emailController.text == mockUser['email'] &&
-            _passwordController.text == mockUser['password']) {
-          isAuthenticated = true;
-        } else {
-          errorMessage =
-              'Invalid credentials. Please check email and password.';
+      // For students, validate location access first
+      if (_selectedRole == 'Student') {
+        final locationResult = await _locationService.validateLocationAccess();
+        if (!locationResult.isSuccess) {
+          setState(() {
+            _isLoading = false;
+          });
+          
+          // Show location error dialog
+          _showLocationErrorDialog(locationResult);
+          return;
         }
       }
 
-      if (isAuthenticated) {
+      AuthResult result;
+      
+      if (_selectedRole == 'Admin') {
+        // Admin login with static credentials
+        result = await _authService.adminLogin(
+          _adminUsernameController.text,
+          _adminPasswordController.text,
+        );
+      } else if (_selectedRole == 'Student') {
+        // Student login with Google SSO
+        result = await _authService.signInWithGoogle();
+      } else {
+        // Faculty login with Google SSO
+        result = await _authService.facultyLoginWithGoogle();
+      }
+
+      if (result.isSuccess && result.user != null) {
         // Success haptic feedback
         HapticFeedback.heavyImpact();
 
         // Navigate to appropriate dashboard
         String route;
-        switch (_selectedRole) {
-          case 'Student':
+        switch (result.user!.role) {
+          case UserRole.student:
             route = '/student-dashboard';
             break;
-          case 'Faculty':
+          case UserRole.faculty:
             route = '/faculty-dashboard';
             break;
-          case 'Admin':
-            route =
-                '/faculty-dashboard'; // Admin uses faculty dashboard for now
+          case UserRole.admin:
+            route = '/admin-dashboard';
             break;
-          default:
-            route = '/student-dashboard';
         }
 
-        Navigator.pushReplacementNamed(context, route);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, route);
+        }
+      } else if (result.needsRegistration) {
+        // Student needs to complete registration
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/student-registration-screen');
+        }
       } else {
         // Error haptic feedback
         HapticFeedback.heavyImpact();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppTheme.lightTheme.colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.error ?? 'Login failed. Please try again.'),
+              backgroundColor: AppTheme.lightTheme.colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       HapticFeedback.heavyImpact();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed. Please try again.'),
-          backgroundColor: AppTheme.lightTheme.colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: $e'),
+            backgroundColor: AppTheme.lightTheme.colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+            ),
           ),
-        ),
-      );
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -304,6 +313,111 @@ class _LoginScreenState extends State<LoginScreen>
         });
       }
     }
+  }
+
+  void _showLocationErrorDialog(LocationValidationResult result) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.location_off,
+              color: Colors.red,
+              size: 6.w,
+            ),
+            SizedBox(width: 2.w),
+            Text(
+              'Location Required',
+              style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              result.errorMessage ?? 'Location access is required to use this application.',
+              style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.lightTheme.colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Container(
+              padding: EdgeInsets.all(3.w),
+              decoration: BoxDecoration(
+                color: AppTheme.lightTheme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.lightTheme.colorScheme.outline,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Why is location required?',
+                    style: AppTheme.lightTheme.textTheme.titleSmall?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                  Text(
+                    '• Secure attendance tracking\n• Prevent unauthorized access\n• Ensure student presence verification',
+                    style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text(
+              'Cancel',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _locationService.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Open Settings',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -504,8 +618,10 @@ class _LoginScreenState extends State<LoginScreen>
                           SizedBox(height: 1.h),
                           Text(
                             _selectedRole == 'Admin'
-                                ? 'Username: ${_mockCredentials['Admin']!['username']}\nPassword: ${_mockCredentials['Admin']!['password']}'
-                                : 'Email: ${_mockCredentials[_selectedRole]!['email']}\nPassword: ${_mockCredentials[_selectedRole]!['password']}',
+                                ? 'Username: ${_adminCredentials['username']}\nPassword: ${_adminCredentials['password']}'
+                                : _selectedRole == 'Student'
+                                    ? 'Use Google Sign-In with @darshan.ac.in email'
+                                    : 'Use Google Sign-In with @darshan.ac.in email\n(Faculty role required)',
                             style: AppTheme.lightTheme.textTheme.bodySmall
                                 ?.copyWith(
                               color: AppTheme

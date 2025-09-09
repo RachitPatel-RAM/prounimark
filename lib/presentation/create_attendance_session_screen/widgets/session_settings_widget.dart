@@ -12,14 +12,14 @@ class SessionSettingsWidget extends StatefulWidget {
   final Function(bool) onNotificationsChanged;
 
   const SessionSettingsWidget({
-    Key? key,
+    super.key,
     required this.autoGenerateCode,
     required this.allowLateEntry,
     required this.enableNotifications,
     required this.onAutoGenerateChanged,
     required this.onLateEntryChanged,
     required this.onNotificationsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<SessionSettingsWidget> createState() => _SessionSettingsWidgetState();
@@ -334,7 +334,7 @@ class _SessionSettingsWidgetState extends State<SessionSettingsWidget> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.lightTheme.primaryColor,
+            activeThumbColor: AppTheme.lightTheme.primaryColor,
             activeTrackColor:
                 AppTheme.lightTheme.primaryColor.withValues(alpha: 0.3),
             inactiveThumbColor:

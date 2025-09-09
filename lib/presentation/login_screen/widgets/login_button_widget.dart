@@ -9,11 +9,11 @@ class LoginButtonWidget extends StatelessWidget {
   final VoidCallback onPressed;
 
   const LoginButtonWidget({
-    Key? key,
+    super.key,
     required this.isLoading,
     required this.isFormValid,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -128,6 +128,12 @@ class _FakeGoogleSignInAuthentication_16 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
+class _FakeSnapshotMetadata_17 extends _i1.SmartFake
+    implements _i6.SnapshotMetadata {
+  _FakeSnapshotMetadata_17(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
 /// A class which mocks [FirebaseAuth].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -1356,7 +1362,6 @@ class MockUserCredential extends _i1.Mock implements _i4.UserCredential {
 /// A class which mocks [GoogleSignInAccount].
 ///
 /// See the documentation for Mockito's code generation for more information.
-// ignore: must_be_immutable
 class MockGoogleSignInAccount extends _i1.Mock
     implements _i8.GoogleSignInAccount {
   MockGoogleSignInAccount() {
@@ -1423,4 +1428,57 @@ class MockGoogleSignInAuthentication extends _i1.Mock
   MockGoogleSignInAuthentication() {
     _i1.throwOnMissingStub(this);
   }
+}
+
+/// A class which mocks [DocumentSnapshot].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockDocumentSnapshot<T extends Object?> extends _i1.Mock
+    implements _i6.DocumentSnapshot<T> {
+  MockDocumentSnapshot() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  String get id =>
+      (super.noSuchMethod(
+            Invocation.getter(#id),
+            returnValue: _i9.dummyValue<String>(this, Invocation.getter(#id)),
+          )
+          as String);
+
+  @override
+  _i6.DocumentReference<T> get reference =>
+      (super.noSuchMethod(
+            Invocation.getter(#reference),
+            returnValue: _FakeDocumentReference_10<T>(
+              this,
+              Invocation.getter(#reference),
+            ),
+          )
+          as _i6.DocumentReference<T>);
+
+  @override
+  _i6.SnapshotMetadata get metadata =>
+      (super.noSuchMethod(
+            Invocation.getter(#metadata),
+            returnValue: _FakeSnapshotMetadata_17(
+              this,
+              Invocation.getter(#metadata),
+            ),
+          )
+          as _i6.SnapshotMetadata);
+
+  @override
+  bool get exists =>
+      (super.noSuchMethod(Invocation.getter(#exists), returnValue: false)
+          as bool);
+
+  @override
+  dynamic get(Object? field) =>
+      super.noSuchMethod(Invocation.method(#get, [field]));
+
+  @override
+  dynamic operator [](Object? field) =>
+      super.noSuchMethod(Invocation.method(#[], [field]));
 }

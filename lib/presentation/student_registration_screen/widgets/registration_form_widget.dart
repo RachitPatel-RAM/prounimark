@@ -15,7 +15,7 @@ class RegistrationFormWidget extends StatefulWidget {
   final Function(bool) onValidationChanged;
 
   const RegistrationFormWidget({
-    Key? key,
+    super.key,
     required this.formKey,
     required this.emailController,
     required this.passwordController,
@@ -24,7 +24,7 @@ class RegistrationFormWidget extends StatefulWidget {
     required this.nameController,
     required this.phoneController,
     required this.onValidationChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<RegistrationFormWidget> createState() => _RegistrationFormWidgetState();

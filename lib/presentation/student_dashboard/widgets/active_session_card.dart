@@ -10,12 +10,12 @@ class ActiveSessionCard extends StatefulWidget {
   final double? locationAccuracy;
 
   const ActiveSessionCard({
-    Key? key,
+    super.key,
     required this.session,
     required this.onMarkAttendance,
     required this.isLocationEnabled,
     this.locationAccuracy,
-  }) : super(key: key);
+  });
 
   @override
   State<ActiveSessionCard> createState() => _ActiveSessionCardState();

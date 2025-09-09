@@ -11,23 +11,7 @@ import 'package:unimark/models/user_model.dart';
 
 import 'auth_service_test.mocks.dart';
 
-// Mock DocumentSnapshot class
-class MockDocumentSnapshot<T> implements DocumentSnapshot<T> {
-  final T? _data;
-  final bool _exists;
-
-  MockDocumentSnapshot({T? data, bool exists = true}) 
-      : _data = data, _exists = exists;
-
-  @override
-  bool get exists => _exists;
-
-  @override
-  T? data() => _data;
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
+// Using generated mocks for DocumentSnapshot
 
 @GenerateMocks([
   FirebaseAuth,
@@ -37,6 +21,7 @@ class MockDocumentSnapshot<T> implements DocumentSnapshot<T> {
   UserCredential,
   GoogleSignInAccount,
   GoogleSignInAuthentication,
+  DocumentSnapshot,
 ])
 void main() {
   group('AuthService', () {
@@ -74,18 +59,18 @@ void main() {
 
         when(mockGoogleSignIn.signIn()).thenAnswer((_) async => mockGoogleUser);
         when(mockAuth.signInWithCredential(any)).thenAnswer((_) async => mockUserCredential);
+        final mockDocSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
+        when(mockDocSnapshot.exists).thenReturn(true);
+        when(mockDocSnapshot.data()).thenReturn({
+          'name': 'Test User',
+          'email': 'test@darshan.ac.in',
+          'role': 'student',
+          'createdAt': Timestamp.now(),
+          'updatedAt': Timestamp.now(),
+          'isActive': true,
+        });
         when(mockFirestore.collection('users').doc('test-uid').get())
-            .thenAnswer((_) async => MockDocumentSnapshot<Map<String, dynamic>>(
-              data: {
-                'name': 'Test User',
-                'email': 'test@darshan.ac.in',
-                'role': 'student',
-                'createdAt': Timestamp.now(),
-                'updatedAt': Timestamp.now(),
-                'isActive': true,
-              },
-              exists: true,
-            ));
+            .thenAnswer((_) async => mockDocSnapshot);
 
         // Act
         final result = await authService.signInWithGoogle();
@@ -125,11 +110,11 @@ void main() {
 
         when(mockGoogleSignIn.signIn()).thenAnswer((_) async => mockGoogleUser);
         when(mockAuth.signInWithCredential(any)).thenAnswer((_) async => mockUserCredential);
+        final mockDocSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
+        when(mockDocSnapshot.exists).thenReturn(false);
+        when(mockDocSnapshot.data()).thenReturn(null);
         when(mockFirestore.collection('users').doc('new-uid').get())
-            .thenAnswer((_) async => MockDocumentSnapshot<Map<String, dynamic>>(
-              data: null,
-              exists: false,
-            ));
+            .thenAnswer((_) async => mockDocSnapshot);
 
         // Act
         final result = await authService.signInWithGoogle();

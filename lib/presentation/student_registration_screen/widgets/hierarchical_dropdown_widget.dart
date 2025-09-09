@@ -13,7 +13,7 @@ class HierarchicalDropdownWidget extends StatefulWidget {
   final bool isLocked;
 
   const HierarchicalDropdownWidget({
-    Key? key,
+    super.key,
     this.selectedBranch,
     this.selectedClass,
     this.selectedBatch,
@@ -21,7 +21,7 @@ class HierarchicalDropdownWidget extends StatefulWidget {
     required this.onClassChanged,
     required this.onBatchChanged,
     this.isLocked = false,
-  }) : super(key: key);
+  });
 
   @override
   State<HierarchicalDropdownWidget> createState() =>

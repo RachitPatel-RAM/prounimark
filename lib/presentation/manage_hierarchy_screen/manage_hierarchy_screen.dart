@@ -9,9 +9,9 @@ class ManageHierarchyScreen extends StatefulWidget {
   final UserModel? currentUser;
 
   const ManageHierarchyScreen({
-    Key? key,
+    super.key,
     this.currentUser,
-  }) : super(key: key);
+  });
 
   @override
   State<ManageHierarchyScreen> createState() => _ManageHierarchyScreenState();
@@ -19,7 +19,6 @@ class ManageHierarchyScreen extends StatefulWidget {
 
 class _ManageHierarchyScreenState extends State<ManageHierarchyScreen> {
   final FirebaseService _firebaseService = FirebaseService();
-  late UserModel _currentUser;
   List<BranchModel> _hierarchyList = [];
   bool _isLoading = true;
   String _errorMessage = '';
@@ -27,24 +26,7 @@ class _ManageHierarchyScreenState extends State<ManageHierarchyScreen> {
   @override
   void initState() {
     super.initState();
-    _currentUser = widget.currentUser ?? _getDefaultUser();
     _loadHierarchy();
-  }
-
-  UserModel _getDefaultUser() {
-    return UserModel(
-      id: 'admin_user',
-      name: 'Admin User',
-      email: 'admin@unimark.com',
-      role: UserRole.admin,
-      enrollmentNumber: 'ADMIN001',
-      branch: 'Administration',
-      className: 'Admin',
-      batch: '2024',
-      isActive: true,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
   }
 
   Future<void> _loadHierarchy() async {
@@ -72,12 +54,14 @@ class _ManageHierarchyScreenState extends State<ManageHierarchyScreen> {
     try {
       await _firebaseService.addHierarchyLevel(hierarchy);
       await _loadHierarchy();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hierarchy level added successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hierarchy level added successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to add hierarchy level: $e';
@@ -91,12 +75,14 @@ class _ManageHierarchyScreenState extends State<ManageHierarchyScreen> {
     try {
       await _firebaseService.updateHierarchyLevel(hierarchy);
       await _loadHierarchy();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hierarchy level updated successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hierarchy level updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to update hierarchy level: $e';
@@ -110,12 +96,14 @@ class _ManageHierarchyScreenState extends State<ManageHierarchyScreen> {
     try {
       await _firebaseService.deleteHierarchyLevel(hierarchyId);
       await _loadHierarchy();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hierarchy level deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hierarchy level deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to delete hierarchy level: $e';

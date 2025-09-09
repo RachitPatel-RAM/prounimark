@@ -12,14 +12,14 @@ class AdvancedOptionsWidget extends StatefulWidget {
   final Function(String) onInstructionsChanged;
 
   const AdvancedOptionsWidget({
-    Key? key,
+    super.key,
     required this.preventDuplicates,
     required this.enableOfflineSync,
     required this.customInstructions,
     required this.onPreventDuplicatesChanged,
     required this.onOfflineSyncChanged,
     required this.onInstructionsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<AdvancedOptionsWidget> createState() => _AdvancedOptionsWidgetState();
@@ -425,7 +425,7 @@ class _AdvancedOptionsWidgetState extends State<AdvancedOptionsWidget> {
               Switch(
                 value: value,
                 onChanged: onChanged,
-                activeColor: AppTheme.lightTheme.primaryColor,
+                activeThumbColor: AppTheme.lightTheme.primaryColor,
                 activeTrackColor:
                     AppTheme.lightTheme.primaryColor.withValues(alpha: 0.3),
                 inactiveThumbColor:

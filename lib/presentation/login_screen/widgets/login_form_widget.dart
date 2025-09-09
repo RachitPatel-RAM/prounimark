@@ -17,7 +17,7 @@ class LoginFormWidget extends StatefulWidget {
   final String? adminPasswordError;
 
   const LoginFormWidget({
-    Key? key,
+    super.key,
     required this.selectedRole,
     required this.emailController,
     required this.passwordController,
@@ -29,7 +29,7 @@ class LoginFormWidget extends StatefulWidget {
     this.passwordError,
     this.adminUsernameError,
     this.adminPasswordError,
-  }) : super(key: key);
+  });
 
   @override
   State<LoginFormWidget> createState() => _LoginFormWidgetState();

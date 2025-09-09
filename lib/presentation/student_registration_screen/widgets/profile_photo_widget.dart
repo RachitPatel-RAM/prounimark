@@ -13,10 +13,10 @@ class ProfilePhotoWidget extends StatefulWidget {
   final XFile? selectedPhoto;
 
   const ProfilePhotoWidget({
-    Key? key,
+    super.key,
     required this.onPhotoSelected,
     this.selectedPhoto,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfilePhotoWidget> createState() => _ProfilePhotoWidgetState();

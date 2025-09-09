@@ -4,7 +4,7 @@ import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../models/attendance_model.dart';
 import '../../models/user_model.dart';
-import '../../services/firebase_service.dart';
+import '../../services/attendance_service.dart';
 import 'widgets/attendance_stats_widget.dart';
 import 'widgets/attendance_list_widget.dart';
 import 'widgets/attendance_chart_widget.dart';
@@ -14,9 +14,9 @@ class AttendanceHistoryScreen extends StatefulWidget {
   final UserModel currentUser;
 
   const AttendanceHistoryScreen({
-    Key? key,
+    super.key,
     required this.currentUser,
-  }) : super(key: key);
+  });
 
   @override
   State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
@@ -24,7 +24,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
     with TickerProviderStateMixin {
-  final FirebaseService _firebaseService = FirebaseService();
+  final AttendanceService _attendanceService = AttendanceService();
   
   late TabController _tabController;
   List<AttendanceModel> _attendanceHistory = [];
@@ -56,7 +56,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
     });
 
     try {
-      final history = await _firebaseService.getAttendanceHistory(widget.currentUser.id);
+      final history = await _attendanceService.getAttendanceHistory();
       setState(() {
         _attendanceHistory = history;
         _isLoading = false;

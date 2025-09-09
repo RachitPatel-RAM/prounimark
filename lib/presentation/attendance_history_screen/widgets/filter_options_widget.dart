@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
-import '../../../core/app_export.dart';
 import '../../../models/attendance_model.dart';
 
 class FilterOptionsWidget extends StatefulWidget {
@@ -11,13 +10,13 @@ class FilterOptionsWidget extends StatefulWidget {
   final VoidCallback onClear;
 
   const FilterOptionsWidget({
-    Key? key,
+    super.key,
     this.startDate,
     this.endDate,
     this.statusFilter,
     required this.onApply,
     required this.onClear,
-  }) : super(key: key);
+  });
 
   @override
   State<FilterOptionsWidget> createState() => _FilterOptionsWidgetState();

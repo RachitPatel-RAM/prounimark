@@ -7,9 +7,9 @@ class AttendanceSummaryWidget extends StatelessWidget {
   final Map<String, dynamic> summaryData;
 
   const AttendanceSummaryWidget({
-    Key? key,
+    super.key,
     required this.summaryData,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

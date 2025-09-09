@@ -8,10 +8,10 @@ class TermsConditionsWidget extends StatefulWidget {
   final Function(bool) onChanged;
 
   const TermsConditionsWidget({
-    Key? key,
+    super.key,
     required this.isAccepted,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<TermsConditionsWidget> createState() => _TermsConditionsWidgetState();

@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../models/session_model.dart';
 
 class LocationService {
@@ -9,7 +8,6 @@ class LocationService {
   LocationService._internal();
 
   // Constants
-  static const double _defaultRadius = 500.0; // meters
   static const double _minimumAccuracy = 50.0; // meters
   static const int _locationTimeoutSeconds = 10;
 
@@ -59,8 +57,10 @@ class LocationService {
 
       // Get current position with high accuracy
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: _locationTimeoutSeconds),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: _locationTimeoutSeconds),
+        ),
       );
 
       // Check accuracy

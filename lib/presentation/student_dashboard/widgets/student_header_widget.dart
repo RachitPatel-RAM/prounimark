@@ -10,12 +10,12 @@ class StudentHeaderWidget extends StatelessWidget {
   final VoidCallback? onProfileTap;
 
   const StudentHeaderWidget({
-    Key? key,
+    super.key,
     required this.studentName,
     required this.enrollmentNumber,
     required this.attendancePercentage,
     this.onProfileTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

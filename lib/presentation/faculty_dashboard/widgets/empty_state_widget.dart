@@ -7,9 +7,9 @@ class EmptyStateWidget extends StatelessWidget {
   final VoidCallback? onCreateSession;
 
   const EmptyStateWidget({
-    Key? key,
+    super.key,
     this.onCreateSession,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

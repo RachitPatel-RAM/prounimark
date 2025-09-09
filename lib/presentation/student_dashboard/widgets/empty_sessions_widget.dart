@@ -4,7 +4,7 @@ import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
 
 class EmptySessionsWidget extends StatelessWidget {
-  const EmptySessionsWidget({Key? key}) : super(key: key);
+  const EmptySessionsWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

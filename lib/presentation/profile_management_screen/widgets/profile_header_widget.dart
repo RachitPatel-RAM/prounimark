@@ -8,10 +8,10 @@ class ProfileHeaderWidget extends StatelessWidget {
   final VoidCallback onEditProfile;
 
   const ProfileHeaderWidget({
-    Key? key,
+    super.key,
     required this.user,
     required this.onEditProfile,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class ProfileHeaderWidget extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               AppTheme.primaryLight,
-              AppTheme.primaryLight.withOpacity(0.8),
+              Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.8),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -67,7 +67,7 @@ class ProfileHeaderWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: const Color.fromRGBO(255, 255, 255, 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -90,7 +90,7 @@ class ProfileHeaderWidget extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundColor: const Color.fromRGBO(255, 255, 255, 0.2),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

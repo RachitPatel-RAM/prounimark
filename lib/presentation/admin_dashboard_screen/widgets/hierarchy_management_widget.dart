@@ -9,9 +9,9 @@ class HierarchyManagementWidget extends StatefulWidget {
   final VoidCallback onRefresh;
 
   const HierarchyManagementWidget({
-    Key? key,
+    super.key,
     required this.onRefresh,
-  }) : super(key: key);
+  });
 
   @override
   State<HierarchyManagementWidget> createState() => _HierarchyManagementWidgetState();
@@ -359,7 +359,7 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppTheme.primaryLight.withOpacity(0.2),
+          backgroundColor: Color.fromRGBO((AppTheme.primaryLight.r * 255.0).round() & 0xff, (AppTheme.primaryLight.g * 255.0).round() & 0xff, (AppTheme.primaryLight.b * 255.0).round() & 0xff, 0.2),
           child: Icon(
             Icons.account_tree,
             color: AppTheme.primaryLight,
@@ -424,7 +424,7 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppTheme.successLight.withOpacity(0.2),
+          backgroundColor: Color.fromRGBO((AppTheme.successLight.r * 255.0).round() & 0xff, (AppTheme.successLight.g * 255.0).round() & 0xff, (AppTheme.successLight.b * 255.0).round() & 0xff, 0.2),
           child: Icon(
             Icons.class_,
             color: AppTheme.successLight,
@@ -489,7 +489,7 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppTheme.warningLight.withOpacity(0.2),
+          backgroundColor: Color.fromRGBO((AppTheme.warningLight.r * 255.0).round() & 0xff, (AppTheme.warningLight.g * 255.0).round() & 0xff, (AppTheme.warningLight.b * 255.0).round() & 0xff, 0.2),
           child: Icon(
             Icons.group,
             color: AppTheme.warningLight,
@@ -582,11 +582,14 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final branchName = nameController.text;
+                navigator.pop();
                 try {
                   final branch = BranchModel(
                     id: '',
-                    name: nameController.text,
+                    name: branchName,
                     description: descriptionController.text,
                     createdAt: DateTime.now(),
                     updatedAt: DateTime.now(),
@@ -594,19 +597,23 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
                   await _firebaseService.createBranch(branch);
                   _loadHierarchyData();
                   widget.onRefresh();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Branch "${nameController.text}" created successfully'),
-                      backgroundColor: AppTheme.successLight,
-                    ),
-                  );
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Branch "$branchName" created successfully'),
+                        backgroundColor: AppTheme.successLight,
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to create branch: $e'),
-                      backgroundColor: AppTheme.errorLight,
-                    ),
-                  );
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to create branch: $e'),
+                        backgroundColor: AppTheme.errorLight,
+                      ),
+                    );
+                  }
                 }
               }
             },
@@ -618,11 +625,91 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
   }
 
   void _editBranch(BranchModel branch) {
-    // TODO: Implement edit branch functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit branch functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    final nameController = TextEditingController(text: branch.name);
+    final descriptionController = TextEditingController(text: branch.description);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Branch'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Branch Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 2.h),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a branch name'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final branchName = nameController.text.trim();
+              final description = descriptionController.text.trim();
+
+              try {
+                final updatedBranch = BranchModel(
+                  id: branch.id,
+                  name: branchName,
+                  description: description.isEmpty ? '' : description,
+                  createdAt: branch.createdAt,
+                  updatedAt: DateTime.now(),
+                );
+                await _firebaseService.updateBranch(updatedBranch);
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Branch "$branchName" updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                _loadHierarchyData();
+                widget.onRefresh();
+              } catch (e) {
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating branch: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
@@ -639,15 +726,33 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Implement delete branch functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Delete branch functionality will be implemented soon'),
-                  backgroundColor: AppTheme.primaryLight,
-                ),
-              );
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final branchName = branch.name;
+              navigator.pop();
+              try {
+                await _firebaseService.deleteBranch(branch.id);
+                _loadHierarchyData();
+                widget.onRefresh();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Branch "$branchName" deleted successfully'),
+                      backgroundColor: AppTheme.successLight,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete branch: $e'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorLight,
@@ -661,41 +766,285 @@ class _HierarchyManagementWidgetState extends State<HierarchyManagementWidget>
   }
 
   void _editClass(ClassModel classModel) {
-    // TODO: Implement edit class functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit class functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    final nameController = TextEditingController(text: classModel.name);
+    final descriptionController = TextEditingController(text: classModel.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Class'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Class Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 2.h),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a class name'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final className = nameController.text.trim();
+              final description = descriptionController.text.trim();
+
+              try {
+                final updatedClass = ClassModel(
+                  id: classModel.id,
+                  name: className,
+                  description: description.isEmpty ? null : description,
+                  branchId: classModel.branchId,
+                  createdAt: classModel.createdAt,
+                  updatedAt: DateTime.now(),
+                );
+                await _firebaseService.updateClass(updatedClass);
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Class "$className" updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                _loadClasses(classModel.branchId);
+                widget.onRefresh();
+              } catch (e) {
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating class: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
 
   void _deleteClass(ClassModel classModel) {
-    // TODO: Implement delete class functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Delete class functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Class'),
+        content: Text('Are you sure you want to delete "${classModel.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final className = classModel.name;
+              navigator.pop();
+              try {
+                await _firebaseService.deleteClass(classModel.id);
+                _loadClasses(classModel.branchId);
+                widget.onRefresh();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Class "$className" deleted successfully'),
+                      backgroundColor: AppTheme.successLight,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete class: $e'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorLight,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
 
   void _editBatch(BatchModel batch) {
-    // TODO: Implement edit batch functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit batch functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    final nameController = TextEditingController(text: batch.name);
+    final descriptionController = TextEditingController(text: batch.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Batch'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Batch Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 2.h),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a batch name'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final batchName = nameController.text.trim();
+              final description = descriptionController.text.trim();
+
+              try {
+                final updatedBatch = BatchModel(
+                  id: batch.id,
+                  name: batchName,
+                  description: description.isEmpty ? null : description,
+                  classId: batch.classId,
+                  createdAt: batch.createdAt,
+                  updatedAt: DateTime.now(),
+                );
+                await _firebaseService.updateBatch(updatedBatch);
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Batch "$batchName" updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                _loadBatches(batch.classId);
+                widget.onRefresh();
+              } catch (e) {
+                navigator.pop();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating batch: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
 
   void _deleteBatch(BatchModel batch) {
-    // TODO: Implement delete batch functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Delete batch functionality will be implemented soon'),
-        backgroundColor: AppTheme.primaryLight,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Batch'),
+        content: Text('Are you sure you want to delete "${batch.name}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final batchName = batch.name;
+              navigator.pop();
+              try {
+                await _firebaseService.deleteBatch(batch.id);
+                _loadBatches(batch.classId);
+                widget.onRefresh();
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Batch "$batchName" deleted successfully'),
+                      backgroundColor: AppTheme.successLight,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete batch: $e'),
+                      backgroundColor: AppTheme.errorLight,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorLight,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

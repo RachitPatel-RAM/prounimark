@@ -7,10 +7,10 @@ class AccountActionsWidget extends StatelessWidget {
   final VoidCallback onDeleteAccount;
 
   const AccountActionsWidget({
-    Key? key,
+    super.key,
     required this.onLogout,
     required this.onDeleteAccount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +87,7 @@ class AccountActionsWidget extends StatelessWidget {
         padding: EdgeInsets.all(3.w),
         decoration: BoxDecoration(
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: Color.fromRGBO((color.r * 255.0).round() & 0xff, (color.g * 255.0).round() & 0xff, (color.b * 255.0).round() & 0xff, 0.2),
             width: 1,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -97,7 +97,7 @@ class AccountActionsWidget extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(2.w),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: Color.fromRGBO((color.r * 255.0).round() & 0xff, (color.g * 255.0).round() & 0xff, (color.b * 255.0).round() & 0xff, 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

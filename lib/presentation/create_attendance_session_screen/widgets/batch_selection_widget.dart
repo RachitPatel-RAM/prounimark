@@ -8,10 +8,10 @@ class BatchSelectionWidget extends StatefulWidget {
   final Function(List<String>) onBatchesChanged;
 
   const BatchSelectionWidget({
-    Key? key,
+    super.key,
     required this.selectedBatches,
     required this.onBatchesChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<BatchSelectionWidget> createState() => _BatchSelectionWidgetState();

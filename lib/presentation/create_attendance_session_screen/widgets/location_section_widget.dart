@@ -10,10 +10,10 @@ class LocationSectionWidget extends StatefulWidget {
   final Function(Position?) onLocationChanged;
 
   const LocationSectionWidget({
-    Key? key,
+    super.key,
     this.currentLocation,
     required this.onLocationChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<LocationSectionWidget> createState() => _LocationSectionWidgetState();
@@ -81,8 +81,10 @@ class _LocationSectionWidgetState extends State<LocationSectionWidget> {
 
       // Get current position
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
 
       widget.onLocationChanged(position);
@@ -119,8 +121,9 @@ class _LocationSectionWidgetState extends State<LocationSectionWidget> {
   }
 
   Color _getAccuracyColor() {
-    if (widget.currentLocation == null)
+    if (widget.currentLocation == null) {
       return AppTheme.lightTheme.colorScheme.onSurfaceVariant;
+    }
 
     final accuracy = widget.currentLocation!.accuracy;
     if (accuracy <= 10) return AppTheme.getSuccessColor(true);

@@ -4,13 +4,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../services/location_validation_service.dart';
 import './widgets/hierarchical_dropdown_widget.dart';
 import './widgets/profile_photo_widget.dart';
 import './widgets/registration_form_widget.dart';
 import './widgets/terms_conditions_widget.dart';
 
 class StudentRegistrationScreen extends StatefulWidget {
-  const StudentRegistrationScreen({Key? key}) : super(key: key);
+  const StudentRegistrationScreen({super.key});
 
   @override
   State<StudentRegistrationScreen> createState() =>
@@ -20,6 +21,7 @@ class StudentRegistrationScreen extends StatefulWidget {
 class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final PageController _pageController = PageController();
+  final LocationValidationService _locationService = LocationValidationService();
 
   // Form controllers
   final TextEditingController _emailController = TextEditingController();
@@ -133,6 +135,13 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     });
 
     try {
+      // Validate location access before registration
+      final locationResult = await _locationService.validateLocationAccess();
+      if (!locationResult.isSuccess) {
+        _showLocationErrorDialog(locationResult);
+        return;
+      }
+
       // Simulate registration process
       await Future.delayed(const Duration(seconds: 3));
 
@@ -267,6 +276,111 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLocationErrorDialog(LocationValidationResult result) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.location_off,
+              color: Colors.red,
+              size: 6.w,
+            ),
+            SizedBox(width: 2.w),
+            Text(
+              'Location Required',
+              style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              result.errorMessage ?? 'Location access is required to complete registration.',
+              style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.lightTheme.colorScheme.onSurface,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Container(
+              padding: EdgeInsets.all(3.w),
+              decoration: BoxDecoration(
+                color: AppTheme.lightTheme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.lightTheme.colorScheme.outline,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Why is location required?',
+                    style: AppTheme.lightTheme.textTheme.titleSmall?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                  Text(
+                    '• Secure attendance tracking\n• Prevent unauthorized access\n• Ensure student presence verification',
+                    style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text(
+              'Cancel',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _locationService.openLocationSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Open Settings',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

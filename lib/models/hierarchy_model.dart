@@ -76,14 +76,18 @@ class ClassModel extends Equatable {
   final String id;
   final String branchId;
   final String name;
+  final String? description;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final bool isActive;
 
   const ClassModel({
     required this.id,
     required this.branchId,
     required this.name,
+    this.description,
     required this.createdAt,
+    this.updatedAt,
     this.isActive = true,
   });
 
@@ -98,7 +102,9 @@ class ClassModel extends Equatable {
       id: doc.id,
       branchId: data['branchId'] ?? '',
       name: data['name'] ?? '',
+      description: data['description'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null ? (data['updatedAt'] as Timestamp).toDate() : null,
       isActive: data['isActive'] ?? true,
     );
   }
@@ -107,7 +113,9 @@ class ClassModel extends Equatable {
     return {
       'branchId': branchId,
       'name': name,
+      'description': description,
       'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'isActive': isActive,
     };
   }
@@ -116,20 +124,24 @@ class ClassModel extends Equatable {
     String? id,
     String? branchId,
     String? name,
+    String? description,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isActive,
   }) {
     return ClassModel(
       id: id ?? this.id,
       branchId: branchId ?? this.branchId,
       name: name ?? this.name,
+      description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [id, branchId, name, createdAt, isActive];
+  List<Object?> get props => [id, branchId, name, description, createdAt, updatedAt, isActive];
 }
 
 @JsonSerializable()
@@ -137,14 +149,18 @@ class BatchModel extends Equatable {
   final String id;
   final String classId;
   final String name;
+  final String? description;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final bool isActive;
 
   const BatchModel({
     required this.id,
     required this.classId,
     required this.name,
+    this.description,
     required this.createdAt,
+    this.updatedAt,
     this.isActive = true,
   });
 
@@ -159,7 +175,9 @@ class BatchModel extends Equatable {
       id: doc.id,
       classId: data['classId'] ?? '',
       name: data['name'] ?? '',
+      description: data['description'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null ? (data['updatedAt'] as Timestamp).toDate() : null,
       isActive: data['isActive'] ?? true,
     );
   }
@@ -168,7 +186,9 @@ class BatchModel extends Equatable {
     return {
       'classId': classId,
       'name': name,
+      'description': description,
       'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'isActive': isActive,
     };
   }
@@ -177,20 +197,24 @@ class BatchModel extends Equatable {
     String? id,
     String? classId,
     String? name,
+    String? description,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isActive,
   }) {
     return BatchModel(
       id: id ?? this.id,
       classId: classId ?? this.classId,
       name: name ?? this.name,
+      description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [id, classId, name, createdAt, isActive];
+  List<Object?> get props => [id, classId, name, description, createdAt, updatedAt, isActive];
 }
 
 @JsonSerializable()
