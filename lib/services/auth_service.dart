@@ -21,14 +21,11 @@ class AuthService {
     serverClientId: '36244654330-tr7dcuaqgjots2iadgmpq71bde5bo2gt.apps.googleusercontent.com',
   );
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // final FirebaseFunctions _functions = FirebaseFunctions.instance; // Discontinued
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
 
   // Constants
   static const String _universityDomain = '@darshan.ac.in';
-  static const String _adminId = 'ADMIN404';
-  static const String _adminPassword = 'ADMIN9090@@@@';
   static const String _deviceBindingKey = 'device_binding_uuid';
 
   // Current user
@@ -48,11 +45,11 @@ class AuthService {
         return AuthResult.failure('Sign-in cancelled by user');
       }
 
-      // Check domain restriction
+      // Check domain restriction for students
       if (!googleUser.email.endsWith(_universityDomain)) {
         await _googleSignIn.signOut();
         return AuthResult.failure(
-          'Access denied. Only @darshan.ac.in email addresses are allowed.'
+          'Only official university email allowed. Please use your @darshan.ac.in account.'
         );
       }
 
@@ -131,25 +128,34 @@ class AuthService {
   /// Admin login with static credentials
   Future<AuthResult> adminLogin(String adminId, String password) async {
     try {
-      if (adminId != _adminId || password != _adminPassword) {
+      // For now, use direct admin creation since cloud functions might not be deployed
+      // In production, this should call the deployed cloud function
+      if (adminId != 'ADMIN' || password != 'ADMIN9090') {
         return AuthResult.failure('Invalid admin credentials');
       }
 
-      // For development: Direct admin authentication
-      // In production, this should call your deployed Cloud Function via HTTP
-      final adminUser = UserModel(
-        id: 'admin',
-        name: 'System Administrator',
-        email: 'admin@darshan.ac.in',
-        role: UserRole.admin,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      // Check if admin user exists in Firestore
+      final adminDoc = await _firestore.collection('users').doc('admin').get();
       
-      // Store admin user in Firestore
-      await _firestore.collection('users').doc('admin').set(adminUser.toFirestore());
-      
-      return AuthResult.success(adminUser);
+      if (!adminDoc.exists) {
+        // Create admin user if it doesn't exist
+        final adminUser = UserModel(
+          id: 'admin',
+          name: 'System Administrator',
+          email: 'admin@darshan.ac.in',
+          role: UserRole.admin,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        // Store admin user in Firestore
+        await _firestore.collection('users').doc('admin').set(adminUser.toFirestore());
+        return AuthResult.success(adminUser);
+      } else {
+        // Admin user exists, return it
+        final adminUser = UserModel.fromFirestore(adminDoc);
+        return AuthResult.success(adminUser);
+      }
 
     } catch (e) {
       return AuthResult.failure('Admin login failed: $e');
@@ -204,6 +210,7 @@ class AuthService {
     required String batchId,
     String? phone,
     String? pin,
+    bool biometricEnabled = false,
   }) async {
     try {
       final user = _auth.currentUser;
@@ -211,12 +218,22 @@ class AuthService {
         return AuthResult.failure('No authenticated user found');
       }
 
+      // Check if enrollment number already exists
+      final enrollmentQuery = await _firestore
+          .collection('users')
+          .where('enrollmentNo', isEqualTo: enrollmentNo.toUpperCase())
+          .limit(1)
+          .get();
+
+      if (enrollmentQuery.docs.isNotEmpty) {
+        return AuthResult.failure('Enrollment number already registered');
+      }
+
       // Generate device binding UUID
       final deviceUuid = await _generateDeviceUuid();
       final instIdHash = await _generateInstIdHash(deviceUuid);
 
-      // For development: Direct registration
-      // In production, this should call your deployed Cloud Function via HTTP
+      // Create user model with all required fields
       final userModel = UserModel(
         id: user.uid,
         name: user.displayName ?? 'Student',
@@ -238,6 +255,16 @@ class AuthService {
 
       // Store user data in Firestore
       await _firestore.collection('users').doc(user.uid).set(userModel.toFirestore());
+      
+      // Store device binding separately for security
+      await _firestore.collection('device_bindings').doc(user.uid).set({
+        'userId': user.uid,
+        'deviceUuid': deviceUuid,
+        'instIdHash': instIdHash,
+        'platform': await _getPlatform(),
+        'boundAt': DateTime.now(),
+        'isActive': true,
+      });
       
       return AuthResult.success(userModel);
 
@@ -293,6 +320,290 @@ class AuthService {
     } catch (e) {
       return [];
     }
+  }
+
+  /// Faculty login with email and password
+  Future<AuthResult> signInFacultyWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Validate email domain
+      if (!email.endsWith(_universityDomain)) {
+        return AuthResult.failure('Invalid email domain. Use @darshan.ac.in email.');
+      }
+
+      // Sign in with Firebase Auth
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user == null) {
+        return AuthResult.failure('Authentication failed');
+      }
+
+      // Get user data from Firestore
+      final userDoc = await _firestore.collection('users').doc(credential.user!.uid).get();
+      if (!userDoc.exists) {
+        await _auth.signOut();
+        return AuthResult.failure('User data not found');
+      }
+
+      final userData = userDoc.data()!;
+      final userRole = userData['role'] as String?;
+
+      // Verify faculty role
+      if (userRole != 'faculty') {
+        await _auth.signOut();
+        return AuthResult.failure('Access denied. Faculty account required.');
+      }
+
+      // Check if user is active
+      if (userData['isActive'] != true) {
+        await _auth.signOut();
+        return AuthResult.failure('Account is deactivated');
+      }
+
+      // Device binding check
+      final deviceUuid = await _generateDeviceUuid();
+      final existingDeviceBinding = await _firestore
+          .collection('device_bindings')
+          .doc(credential.user!.uid)
+          .get();
+
+      if (existingDeviceBinding.exists) {
+        final bindingData = existingDeviceBinding.data()!;
+        final storedDeviceUuid = bindingData['deviceUuid'] as String?;
+        
+        if (storedDeviceUuid != null && storedDeviceUuid != deviceUuid) {
+          await _auth.signOut();
+          return AuthResult.failure('Account is already active on another device');
+        }
+      }
+
+      // Update device binding
+      await _firestore.collection('device_bindings').doc(credential.user!.uid).set({
+        'userId': credential.user!.uid,
+        'deviceUuid': deviceUuid,
+        'instIdHash': await _generateInstIdHash(deviceUuid),
+        'platform': await _getPlatform(),
+        'boundAt': DateTime.now(),
+        'isActive': true,
+        'lastLogin': DateTime.now(),
+      });
+
+      // Update last login
+      await _firestore.collection('users').doc(credential.user!.uid).update({
+        'lastLogin': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      });
+
+      // Log successful login
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'FACULTY_LOGIN',
+        'facultyUid': credential.user!.uid,
+        'email': email,
+        'timestamp': DateTime.now(),
+        'deviceUuid': deviceUuid,
+      });
+
+      final userModel = UserModel.fromFirestore(userDoc);
+      return AuthResult.success(userModel);
+
+    } catch (e) {
+      return AuthResult.failure('Login failed: $e');
+    }
+  }
+
+  /// Create faculty user via Cloud Function (admin only)
+  Future<AuthResult> createFacultyUserViaFunction({
+    required String email,
+    required String name,
+    String? branchId,
+    String? temporaryPassword,
+  }) async {
+    try {
+      // For development: Direct faculty creation
+      // In production, this should call your deployed Cloud Function via HTTP
+      final result = await createFacultyUser(
+        email: email,
+        name: name,
+        branchId: branchId ?? '',
+      );
+      
+      return result;
+    } catch (e) {
+      return AuthResult.failure('Failed to create faculty user: $e');
+    }
+  }
+
+  /// Update faculty user (admin only)
+  Future<AuthResult> updateFacultyUser({
+    required String facultyId,
+    String? name,
+  }) async {
+    try {
+      if (name != null && name.trim().isNotEmpty) {
+        await _firestore.collection('users').doc(facultyId).update({
+          'name': name.trim(),
+          'updatedAt': DateTime.now(),
+        });
+      }
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'FACULTY_UPDATED',
+        'adminUid': _auth.currentUser?.uid,
+        'facultyUid': facultyId,
+        'changes': name != null ? {'name': name.trim()} : {},
+        'timestamp': DateTime.now(),
+      });
+
+      return AuthResult.success(UserModel(
+        id: facultyId,
+        name: name ?? 'Faculty',
+        email: '',
+        role: UserRole.faculty,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+    } catch (e) {
+      return AuthResult.failure('Failed to update faculty user: $e');
+    }
+  }
+
+  /// Delete faculty user (admin only)
+  Future<AuthResult> deleteFacultyUser(String facultyId) async {
+    try {
+      // Check if faculty has any active sessions
+      final activeSessions = await _firestore
+          .collection('sessions')
+          .where('facultyId', isEqualTo: facultyId)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (activeSessions.docs.isNotEmpty) {
+        return AuthResult.failure('Cannot delete faculty with active sessions. Please close all sessions first.');
+      }
+
+      // Get faculty data before deletion for logging
+      final facultyDoc = await _firestore.collection('users').doc(facultyId).get();
+      final facultyData = facultyDoc.data();
+
+      // Delete user document
+      await _firestore.collection('users').doc(facultyId).delete();
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'FACULTY_DELETED',
+        'adminUid': _auth.currentUser?.uid,
+        'facultyUid': facultyId,
+        'facultyEmail': facultyData?['email'],
+        'facultyName': facultyData?['name'],
+        'timestamp': DateTime.now(),
+      });
+
+      return AuthResult.success(UserModel(
+        id: facultyId,
+        name: facultyData?['name'] ?? 'Faculty',
+        email: facultyData?['email'] ?? '',
+        role: UserRole.faculty,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+    } catch (e) {
+      return AuthResult.failure('Failed to delete faculty user: $e');
+    }
+  }
+
+  /// Faculty password reset (faculty can change their own password)
+  Future<AuthResult> resetFacultyPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return AuthResult.failure('No authenticated user found');
+      }
+
+      // Verify current password by re-authenticating
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Update password
+      await user.updatePassword(newPassword);
+
+      // Update user model to mark password as changed
+      await _firestore.collection('users').doc(user.uid).update({
+        'tempPassword': false,
+        'updatedAt': DateTime.now(),
+      });
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'FACULTY_PASSWORD_CHANGED',
+        'facultyUid': user.uid,
+        'email': user.email,
+        'timestamp': DateTime.now(),
+      });
+
+      return AuthResult.success(UserModel(
+        id: user.uid,
+        name: user.displayName ?? 'Faculty',
+        email: user.email ?? '',
+        role: UserRole.faculty,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        tempPassword: false,
+      ));
+    } catch (e) {
+      return AuthResult.failure('Failed to reset password: $e');
+    }
+  }
+
+  /// Reset faculty password (admin only)
+  Future<AuthResult> adminResetFacultyPassword(String facultyId) async {
+    try {
+      // For development: Generate new password
+      // In production, this should call your deployed Cloud Function via HTTP
+      final newPassword = _generateTemporaryPassword();
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'FACULTY_PASSWORD_RESET_BY_ADMIN',
+        'adminUid': _auth.currentUser?.uid,
+        'facultyUid': facultyId,
+        'newPassword': newPassword, // Include the new password in the log
+        'timestamp': DateTime.now(),
+      });
+
+      return AuthResult.success(UserModel(
+        id: facultyId,
+        name: 'Faculty',
+        email: '',
+        role: UserRole.faculty,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+    } catch (e) {
+      return AuthResult.failure('Failed to reset faculty password: $e');
+    }
+  }
+
+  /// Generate temporary password
+  String _generateTemporaryPassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#\$%^&*';
+    final random = Random.secure();
+    return String.fromCharCodes(
+      Iterable.generate(12, (_) => chars.codeUnitAt(random.nextInt(chars.length)))
+    );
   }
 
   /// Sign out

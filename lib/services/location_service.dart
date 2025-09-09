@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
-import '../models/session_model.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'location_service.g.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -85,14 +87,14 @@ class LocationService {
   /// Check if location is within session radius
   bool isWithinRadius(
     LocationData userLocation,
-    FacultyLocation sessionLocation,
+    LocationData sessionLocation,
     double radiusMeters,
   ) {
     final distance = calculateDistance(
       userLocation.latitude,
       userLocation.longitude,
-      sessionLocation.lat,
-      sessionLocation.lng,
+      sessionLocation.latitude,
+      sessionLocation.longitude,
     );
 
     return distance <= radiusMeters;
@@ -122,7 +124,7 @@ class LocationService {
 
   /// Verify location for attendance submission
   Future<LocationVerificationResult> verifyLocationForAttendance(
-    FacultyLocation sessionLocation,
+    LocationData sessionLocation,
     double sessionRadius,
   ) async {
     try {
@@ -145,8 +147,8 @@ class LocationService {
         final distance = calculateDistance(
           userLocation.latitude,
           userLocation.longitude,
-          sessionLocation.lat,
-          sessionLocation.lng,
+          sessionLocation.latitude,
+          sessionLocation.longitude,
         );
 
         return LocationVerificationResult.failure(
@@ -232,6 +234,7 @@ class LocationService {
 }
 
 /// Location data class
+@JsonSerializable()
 class LocationData {
   final double latitude;
   final double longitude;
@@ -242,6 +245,9 @@ class LocationData {
     required this.longitude,
     required this.accuracy,
   });
+
+  factory LocationData.fromJson(Map<String, dynamic> json) => _$LocationDataFromJson(json);
+  Map<String, dynamic> toJson() => _$LocationDataToJson(this);
 
   Map<String, dynamic> toMap() {
     return {
@@ -256,6 +262,22 @@ class LocationData {
       latitude: map['latitude']?.toDouble() ?? 0.0,
       longitude: map['longitude']?.toDouble() ?? 0.0,
       accuracy: map['accuracy']?.toDouble() ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+      'accuracy': accuracy,
+    };
+  }
+
+  factory LocationData.fromFirestore(Map<String, dynamic> data) {
+    return LocationData(
+      latitude: data['latitude']?.toDouble() ?? 0.0,
+      longitude: data['longitude']?.toDouble() ?? 0.0,
+      accuracy: data['accuracy']?.toDouble() ?? 0.0,
     );
   }
 }

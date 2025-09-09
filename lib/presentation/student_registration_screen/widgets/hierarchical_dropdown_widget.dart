@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../models/hierarchy_model.dart';
 
 class HierarchicalDropdownWidget extends StatefulWidget {
-  final String? selectedBranch;
-  final String? selectedClass;
-  final String? selectedBatch;
+  final List<BranchModel> branches;
+  final List<ClassModel> classes;
+  final List<BatchModel> batches;
+  final String? selectedBranchId;
+  final String? selectedClassId;
+  final String? selectedBatchId;
   final Function(String?) onBranchChanged;
   final Function(String?) onClassChanged;
   final Function(String?) onBatchChanged;
@@ -14,9 +18,12 @@ class HierarchicalDropdownWidget extends StatefulWidget {
 
   const HierarchicalDropdownWidget({
     super.key,
-    this.selectedBranch,
-    this.selectedClass,
-    this.selectedBatch,
+    required this.branches,
+    required this.classes,
+    required this.batches,
+    this.selectedBranchId,
+    this.selectedClassId,
+    this.selectedBatchId,
     required this.onBranchChanged,
     required this.onClassChanged,
     required this.onBatchChanged,
@@ -33,132 +40,6 @@ class _HierarchicalDropdownWidgetState
   bool _isLoadingBranches = false;
   bool _isLoadingClasses = false;
   bool _isLoadingBatches = false;
-
-  // Mock data - In real app, this would come from Firebase Firestore
-  final List<Map<String, dynamic>> _branchData = [
-    {
-      "id": "CE",
-      "name": "Computer Engineering",
-      "classes": [
-        {
-          "id": "CE_SEM1",
-          "name": "Semester 1",
-          "batches": [
-            {"id": "CE_SEM1_A", "name": "Batch A"},
-            {"id": "CE_SEM1_B", "name": "Batch B"},
-            {"id": "CE_SEM1_C", "name": "Batch C"},
-          ]
-        },
-        {
-          "id": "CE_SEM2",
-          "name": "Semester 2",
-          "batches": [
-            {"id": "CE_SEM2_A", "name": "Batch A"},
-            {"id": "CE_SEM2_B", "name": "Batch B"},
-          ]
-        },
-        {
-          "id": "CE_SEM3",
-          "name": "Semester 3",
-          "batches": [
-            {"id": "CE_SEM3_A", "name": "Batch A"},
-            {"id": "CE_SEM3_B", "name": "Batch B"},
-            {"id": "CE_SEM3_C", "name": "Batch C"},
-          ]
-        },
-      ]
-    },
-    {
-      "id": "IT",
-      "name": "Information Technology",
-      "classes": [
-        {
-          "id": "IT_SEM1",
-          "name": "Semester 1",
-          "batches": [
-            {"id": "IT_SEM1_A", "name": "Batch A"},
-            {"id": "IT_SEM1_B", "name": "Batch B"},
-          ]
-        },
-        {
-          "id": "IT_SEM2",
-          "name": "Semester 2",
-          "batches": [
-            {"id": "IT_SEM2_A", "name": "Batch A"},
-            {"id": "IT_SEM2_B", "name": "Batch B"},
-            {"id": "IT_SEM2_C", "name": "Batch C"},
-          ]
-        },
-      ]
-    },
-    {
-      "id": "EC",
-      "name": "Electronics & Communication",
-      "classes": [
-        {
-          "id": "EC_SEM1",
-          "name": "Semester 1",
-          "batches": [
-            {"id": "EC_SEM1_A", "name": "Batch A"},
-            {"id": "EC_SEM1_B", "name": "Batch B"},
-          ]
-        },
-        {
-          "id": "EC_SEM3",
-          "name": "Semester 3",
-          "batches": [
-            {"id": "EC_SEM3_A", "name": "Batch A"},
-            {"id": "EC_SEM3_B", "name": "Batch B"},
-            {"id": "EC_SEM3_C", "name": "Batch C"},
-          ]
-        },
-      ]
-    },
-    {
-      "id": "ME",
-      "name": "Mechanical Engineering",
-      "classes": [
-        {
-          "id": "ME_SEM1",
-          "name": "Semester 1",
-          "batches": [
-            {"id": "ME_SEM1_A", "name": "Batch A"},
-            {"id": "ME_SEM1_B", "name": "Batch B"},
-          ]
-        },
-        {
-          "id": "ME_SEM2",
-          "name": "Semester 2",
-          "batches": [
-            {"id": "ME_SEM2_A", "name": "Batch A"},
-            {"id": "ME_SEM2_B", "name": "Batch B"},
-            {"id": "ME_SEM2_C", "name": "Batch C"},
-          ]
-        },
-      ]
-    },
-  ];
-
-  List<Map<String, dynamic>> get _availableBranches => _branchData;
-
-  List<Map<String, dynamic>> get _availableClasses {
-    if (widget.selectedBranch == null) return [];
-    final branch = _branchData.firstWhere(
-      (b) => (b["id"] as String) == widget.selectedBranch,
-      orElse: () => <String, dynamic>{},
-    );
-    return (branch["classes"] as List<Map<String, dynamic>>?) ?? [];
-  }
-
-  List<Map<String, dynamic>> get _availableBatches {
-    if (widget.selectedClass == null) return [];
-    final classes = _availableClasses;
-    final selectedClass = classes.firstWhere(
-      (c) => (c["id"] as String) == widget.selectedClass,
-      orElse: () => <String, dynamic>{},
-    );
-    return (selectedClass["batches"] as List<Map<String, dynamic>>?) ?? [];
-  }
 
   Future<void> _loadBranches() async {
     setState(() => _isLoadingBranches = true);
@@ -191,22 +72,12 @@ class _HierarchicalDropdownWidgetState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _buildPickerBottomSheet(
-        title: 'Select Branch',
-        items: _availableBranches,
-        selectedValue: widget.selectedBranch,
-        onSelected: (value) {
-          widget.onBranchChanged(value);
-          // Reset dependent selections
-          widget.onClassChanged(null);
-          widget.onBatchChanged(null);
-        },
-      ),
+      builder: (context) => _buildBranchPickerBottomSheet(),
     );
   }
 
   void _showClassPicker() async {
-    if (widget.isLocked || widget.selectedBranch == null) return;
+    if (widget.isLocked || widget.selectedBranchId == null) return;
 
     await _loadClasses();
     if (!mounted) return;
@@ -215,21 +86,12 @@ class _HierarchicalDropdownWidgetState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _buildPickerBottomSheet(
-        title: 'Select Class',
-        items: _availableClasses,
-        selectedValue: widget.selectedClass,
-        onSelected: (value) {
-          widget.onClassChanged(value);
-          // Reset dependent selection
-          widget.onBatchChanged(null);
-        },
-      ),
+      builder: (context) => _buildClassPickerBottomSheet(),
     );
   }
 
   void _showBatchPicker() async {
-    if (widget.isLocked || widget.selectedClass == null) return;
+    if (widget.isLocked || widget.selectedClassId == null) return;
 
     await _loadBatches();
     if (!mounted) return;
@@ -238,21 +100,11 @@ class _HierarchicalDropdownWidgetState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _buildPickerBottomSheet(
-        title: 'Select Batch',
-        items: _availableBatches,
-        selectedValue: widget.selectedBatch,
-        onSelected: widget.onBatchChanged,
-      ),
+      builder: (context) => _buildBatchPickerBottomSheet(),
     );
   }
 
-  Widget _buildPickerBottomSheet({
-    required String title,
-    required List<Map<String, dynamic>> items,
-    required String? selectedValue,
-    required Function(String?) onSelected,
-  }) {
+  Widget _buildBranchPickerBottomSheet() {
     return Container(
       height: 60.h,
       decoration: BoxDecoration(
@@ -280,15 +132,15 @@ class _HierarchicalDropdownWidgetState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  title,
+                  'Select Branch',
                   style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: CustomIconWidget(
-                    iconName: 'close',
+                  icon: Icon(
+                    Icons.close,
                     size: 6.w,
                     color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
                   ),
@@ -302,14 +154,14 @@ class _HierarchicalDropdownWidgetState
           // Items list
           Expanded(
             child: ListView.builder(
-              itemCount: items.length,
+              itemCount: widget.branches.length,
               itemBuilder: (context, index) {
-                final item = items[index];
-                final isSelected = selectedValue == item["id"];
+                final branch = widget.branches[index];
+                final isSelected = widget.selectedBranchId == branch.id;
 
                 return ListTile(
                   title: Text(
-                    item["name"] as String,
+                    branch.name,
                     style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
                       fontWeight:
                           isSelected ? FontWeight.w500 : FontWeight.w400,
@@ -319,14 +171,189 @@ class _HierarchicalDropdownWidgetState
                     ),
                   ),
                   trailing: isSelected
-                      ? CustomIconWidget(
-                          iconName: 'check',
+                      ? Icon(
+                          Icons.check,
                           size: 5.w,
                           color: AppTheme.lightTheme.colorScheme.primary,
                         )
                       : null,
                   onTap: () {
-                    onSelected(item["id"] as String);
+                    widget.onBranchChanged(branch.id);
+                    widget.onClassChanged(null);
+                    widget.onBatchChanged(null);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClassPickerBottomSheet() {
+    return Container(
+      height: 60.h,
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 12.w,
+            height: 0.5.h,
+            margin: EdgeInsets.symmetric(vertical: 2.h),
+            decoration: BoxDecoration(
+              color: AppTheme.lightTheme.colorScheme.onSurfaceVariant
+                  .withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Title
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Class',
+                  style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.close,
+                    size: 6.w,
+                    color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Divider(height: 1, color: AppTheme.lightTheme.dividerColor),
+
+          // Items list
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.classes.length,
+              itemBuilder: (context, index) {
+                final classModel = widget.classes[index];
+                final isSelected = widget.selectedClassId == classModel.id;
+
+                return ListTile(
+                  title: Text(
+                    classModel.name,
+                    style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: isSelected
+                          ? AppTheme.lightTheme.colorScheme.primary
+                          : AppTheme.lightTheme.colorScheme.onSurface,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check,
+                          size: 5.w,
+                          color: AppTheme.lightTheme.colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    widget.onClassChanged(classModel.id);
+                    widget.onBatchChanged(null);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBatchPickerBottomSheet() {
+    return Container(
+      height: 60.h,
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 12.w,
+            height: 0.5.h,
+            margin: EdgeInsets.symmetric(vertical: 2.h),
+            decoration: BoxDecoration(
+              color: AppTheme.lightTheme.colorScheme.onSurfaceVariant
+                  .withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Title
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Batch',
+                  style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.close,
+                    size: 6.w,
+                    color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Divider(height: 1, color: AppTheme.lightTheme.dividerColor),
+
+          // Items list
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.batches.length,
+              itemBuilder: (context, index) {
+                final batch = widget.batches[index];
+                final isSelected = widget.selectedBatchId == batch.id;
+
+                return ListTile(
+                  title: Text(
+                    batch.name,
+                    style: AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: isSelected
+                          ? AppTheme.lightTheme.colorScheme.primary
+                          : AppTheme.lightTheme.colorScheme.onSurface,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check,
+                          size: 5.w,
+                          color: AppTheme.lightTheme.colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    widget.onBatchChanged(batch.id);
                     Navigator.pop(context);
                   },
                 );
@@ -364,7 +391,7 @@ class _HierarchicalDropdownWidgetState
         SizedBox(height: 1.h),
         InkWell(
           onTap: isEnabled && !isLoading ? onTap : null,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 3.h),
@@ -375,7 +402,7 @@ class _HierarchicalDropdownWidgetState
                     : AppTheme.lightTheme.colorScheme.outline
                         .withValues(alpha: 0.5),
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               color: isEnabled
                   ? AppTheme.lightTheme.colorScheme.surface
                   : AppTheme.lightTheme.colorScheme.surface
@@ -405,17 +432,15 @@ class _HierarchicalDropdownWidgetState
                     ),
                   )
                 else if (widget.isLocked)
-                  CustomIconWidget(
-                    iconName: 'lock',
+                  Icon(
+                    Icons.lock,
                     size: 5.w,
                     color: AppTheme.lightTheme.colorScheme.onSurfaceVariant
                         .withValues(alpha: 0.6),
                   )
                 else
-                  CustomIconWidget(
-                    iconName: isEnabled
-                        ? 'keyboard_arrow_down'
-                        : 'keyboard_arrow_down',
+                  Icon(
+                    Icons.keyboard_arrow_down,
                     size: 6.w,
                     color: isEnabled
                         ? AppTheme.lightTheme.colorScheme.onSurfaceVariant
@@ -433,20 +458,38 @@ class _HierarchicalDropdownWidgetState
   String _getDisplayName(String id, String type) {
     switch (type) {
       case 'Branch':
-        return _availableBranches.firstWhere(
-          (b) => (b["id"] as String) == id,
-          orElse: () => {"name": id},
-        )["name"] as String;
+        final branch = widget.branches.firstWhere(
+          (b) => b.id == id,
+          orElse: () => BranchModel(
+            id: id,
+            name: id,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+        return branch.name;
       case 'Class':
-        return _availableClasses.firstWhere(
-          (c) => (c["id"] as String) == id,
-          orElse: () => {"name": id},
-        )["name"] as String;
+        final classModel = widget.classes.firstWhere(
+          (c) => c.id == id,
+          orElse: () => ClassModel(
+            id: id,
+            branchId: '',
+            name: id,
+            createdAt: DateTime.now(),
+          ),
+        );
+        return classModel.name;
       case 'Batch':
-        return _availableBatches.firstWhere(
-          (b) => (b["id"] as String) == id,
-          orElse: () => {"name": id},
-        )["name"] as String;
+        final batch = widget.batches.firstWhere(
+          (b) => b.id == id,
+          orElse: () => BatchModel(
+            id: id,
+            classId: '',
+            name: id,
+            createdAt: DateTime.now(),
+          ),
+        );
+        return batch.name;
       default:
         return id;
     }
@@ -457,10 +500,35 @@ class _HierarchicalDropdownWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          children: [
+            Icon(
+              Icons.school,
+              color: AppTheme.lightTheme.colorScheme.primary,
+              size: 6.w,
+            ),
+            SizedBox(width: 3.w),
+            Text(
+              'Academic Details',
+              style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          'Select your branch, class, and batch. These selections will be locked after registration and can only be changed by an administrator.',
+          style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+            color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        SizedBox(height: 3.h),
+
         // Branch Dropdown
         _buildDropdownField(
           label: 'Branch',
-          value: widget.selectedBranch,
+          value: widget.selectedBranchId,
           hint: 'Select your branch',
           onTap: _showBranchPicker,
           isEnabled: !widget.isLocked,
@@ -471,12 +539,12 @@ class _HierarchicalDropdownWidgetState
         // Class Dropdown
         _buildDropdownField(
           label: 'Class',
-          value: widget.selectedClass,
-          hint: widget.selectedBranch != null
+          value: widget.selectedClassId,
+          hint: widget.selectedBranchId != null
               ? 'Select your class'
               : 'Select branch first',
           onTap: _showClassPicker,
-          isEnabled: !widget.isLocked && widget.selectedBranch != null,
+          isEnabled: !widget.isLocked && widget.selectedBranchId != null,
           isLoading: _isLoadingClasses,
         ),
         SizedBox(height: 3.h),
@@ -484,12 +552,12 @@ class _HierarchicalDropdownWidgetState
         // Batch Dropdown
         _buildDropdownField(
           label: 'Batch',
-          value: widget.selectedBatch,
-          hint: widget.selectedClass != null
+          value: widget.selectedBatchId,
+          hint: widget.selectedClassId != null
               ? 'Select your batch'
               : 'Select class first',
           onTap: _showBatchPicker,
-          isEnabled: !widget.isLocked && widget.selectedClass != null,
+          isEnabled: !widget.isLocked && widget.selectedClassId != null,
           isLoading: _isLoadingBatches,
         ),
 
@@ -499,15 +567,15 @@ class _HierarchicalDropdownWidgetState
             padding: EdgeInsets.all(3.w),
             decoration: BoxDecoration(
               color: AppTheme.warningLight.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: AppTheme.warningLight.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
-                CustomIconWidget(
-                  iconName: 'info',
+                Icon(
+                  Icons.info_outline,
                   size: 5.w,
                   color: AppTheme.warningLight,
                 ),

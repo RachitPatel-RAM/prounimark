@@ -1,5 +1,7 @@
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 
 class BiometricService {
   static final BiometricService _instance = BiometricService._internal();
@@ -8,45 +10,49 @@ class BiometricService {
 
   final LocalAuthentication _localAuth = LocalAuthentication();
 
-  /// Check if biometric authentication is available
+  /// Check if biometric authentication is available on the device
   Future<BiometricAvailability> checkBiometricAvailability() async {
     try {
       final bool isAvailable = await _localAuth.canCheckBiometrics;
       final bool isDeviceSupported = await _localAuth.isDeviceSupported();
       
       if (!isDeviceSupported) {
-        return const BiometricNotSupported();
+        return BiometricAvailability.notSupported;
       }
 
       if (!isAvailable) {
-        return const BiometricNotAvailable();
+        return BiometricAvailability.notAvailable;
       }
 
       final List<BiometricType> availableBiometrics = await _localAuth.getAvailableBiometrics();
       
       if (availableBiometrics.isEmpty) {
-        return const BiometricNotEnrolled();
+        return BiometricAvailability.notEnrolled;
       }
 
-      return BiometricAvailable(availableBiometrics);
+      return BiometricAvailability.available;
     } catch (e) {
-      return BiometricError(e.toString());
+      return BiometricAvailability.error;
     }
   }
 
-  /// Authenticate using biometric
-  Future<BiometricResult> authenticate({
-    String? reason,
+  /// Get available biometric types
+  Future<List<BiometricType>> getAvailableBiometrics() async {
+    try {
+      return await _localAuth.getAvailableBiometrics();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Authenticate using biometrics
+  Future<BiometricResult> authenticateWithBiometrics({
+    String reason = 'Please authenticate to continue',
     bool stickyAuth = true,
   }) async {
     try {
-      final availability = await checkBiometricAvailability();
-      if (availability is! BiometricAvailable) {
-        return BiometricResult.failure('Biometric authentication not available');
-      }
-
       final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason: reason ?? 'Please authenticate to mark attendance',
+        localizedReason: reason,
         options: AuthenticationOptions(
           stickyAuth: stickyAuth,
           biometricOnly: true,
@@ -59,18 +65,34 @@ class BiometricService {
         return BiometricResult.failure('Authentication cancelled or failed');
       }
     } on PlatformException catch (e) {
-      return BiometricResult.failure(_getBiometricErrorMessage(e.code));
+      String errorMessage = 'Biometric authentication failed';
+      
+      switch (e.code) {
+        case 'NotAvailable':
+          errorMessage = 'Biometric authentication is not available';
+          break;
+        case 'NotEnrolled':
+          errorMessage = 'No biometric data enrolled. Please set up biometric authentication in device settings.';
+          break;
+        case 'LockedOut':
+          errorMessage = 'Biometric authentication is locked out. Please try again later.';
+          break;
+        case 'PermanentlyLockedOut':
+          errorMessage = 'Biometric authentication is permanently locked out. Please use device passcode.';
+          break;
+        case 'UserCancel':
+          errorMessage = 'Authentication was cancelled by user';
+          break;
+        case 'AuthenticationInProgress':
+          errorMessage = 'Authentication is already in progress';
+          break;
+        default:
+          errorMessage = 'Biometric authentication failed: ${e.message}';
+      }
+
+      return BiometricResult.failure(errorMessage);
     } catch (e) {
       return BiometricResult.failure('Biometric authentication failed: $e');
-    }
-  }
-
-  /// Get biometric types available on device
-  Future<List<BiometricType>> getAvailableBiometrics() async {
-    try {
-      return await _localAuth.getAvailableBiometrics();
-    } catch (e) {
-      return [];
     }
   }
 
@@ -83,7 +105,16 @@ class BiometricService {
     }
   }
 
-  /// Get user-friendly biometric type name
+  /// Check if biometric authentication can be checked
+  Future<bool> canCheckBiometrics() async {
+    try {
+      return await _localAuth.canCheckBiometrics;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get biometric type name for display
   String getBiometricTypeName(BiometricType type) {
     switch (type) {
       case BiometricType.fingerprint:
@@ -99,140 +130,70 @@ class BiometricService {
     }
   }
 
-  /// Get primary biometric type name for display
-  String getPrimaryBiometricTypeName(List<BiometricType> types) {
-    if (types.contains(BiometricType.face)) {
-      return 'Face ID';
-    } else if (types.contains(BiometricType.fingerprint)) {
-      return 'Fingerprint';
-    } else if (types.contains(BiometricType.iris)) {
-      return 'Iris';
-    } else if (types.contains(BiometricType.strong)) {
-      return 'Strong Biometric';
-    } else if (types.contains(BiometricType.weak)) {
-      return 'Weak Biometric';
-    }
-    return 'Biometric';
+  /// Get all biometric type names for display
+  List<String> getBiometricTypeNames(List<BiometricType> types) {
+    return types.map((type) => getBiometricTypeName(type)).toList();
   }
 
-  /// Get error message for biometric authentication
-  String _getBiometricErrorMessage(String errorCode) {
-    switch (errorCode) {
-      case 'NotAvailable':
-        return 'Biometric authentication is not available on this device';
-      case 'NotEnrolled':
-        return 'No biometric data is enrolled. Please set up biometric authentication in device settings';
-      case 'LockedOut':
-        return 'Biometric authentication is locked out. Please try again later or use device credentials';
-      case 'PermanentlyLockedOut':
-        return 'Biometric authentication is permanently locked out. Please use device credentials';
-      case 'UserCancel':
-        return 'Authentication was cancelled by user';
-      case 'SystemCancel':
-        return 'Authentication was cancelled by system';
-      case 'PasscodeNotSet':
-        return 'Device passcode is not set. Please set up a passcode in device settings';
-      case 'TouchIDNotAvailable':
-        return 'Touch ID is not available on this device';
-      case 'TouchIDNotEnrolled':
-        return 'Touch ID is not enrolled. Please set up Touch ID in device settings';
-      case 'FaceIDNotAvailable':
-        return 'Face ID is not available on this device';
-      case 'FaceIDNotEnrolled':
-        return 'Face ID is not enrolled. Please set up Face ID in device settings';
-      case 'BiometricNotAvailable':
-        return 'Biometric authentication is not available';
-      case 'BiometricNotEnrolled':
-        return 'Biometric authentication is not enrolled';
-      case 'BiometricLockedOut':
-        return 'Biometric authentication is locked out';
-      case 'BiometricPermanentlyLockedOut':
-        return 'Biometric authentication is permanently locked out';
-      default:
-        return 'Biometric authentication failed: $errorCode';
+  /// Hash PIN for secure storage
+  String hashPin(String pin) {
+    final bytes = utf8.encode(pin);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// Verify PIN against hash
+  bool verifyPin(String pin, String hash) {
+    return hashPin(pin) == hash;
+  }
+
+  /// Validate PIN format (4 digits)
+  bool isValidPin(String pin) {
+    return RegExp(r'^\d{4}$').hasMatch(pin);
+  }
+
+  /// Get PIN validation error message
+  String? getPinValidationError(String pin) {
+    if (pin.isEmpty) {
+      return 'PIN is required';
     }
+    if (pin.length != 4) {
+      return 'PIN must be exactly 4 digits';
+    }
+    if (!RegExp(r'^\d+$').hasMatch(pin)) {
+      return 'PIN must contain only numbers';
+    }
+    return null;
   }
 }
 
-/// Biometric availability result
-abstract class BiometricAvailability {
-  const BiometricAvailability();
-}
-
-class BiometricAvailable extends BiometricAvailability {
-  final List<BiometricType> types;
-  const BiometricAvailable(this.types);
-}
-
-class BiometricNotSupported extends BiometricAvailability {
-  const BiometricNotSupported();
-}
-
-class BiometricNotAvailable extends BiometricAvailability {
-  const BiometricNotAvailable();
-}
-
-class BiometricNotEnrolled extends BiometricAvailability {
-  const BiometricNotEnrolled();
-}
-
-class BiometricError extends BiometricAvailability {
-  final String message;
-  const BiometricError(this.message);
+/// Biometric availability status
+enum BiometricAvailability {
+  available,
+  notAvailable,
+  notSupported,
+  notEnrolled,
+  error,
 }
 
 /// Biometric authentication result
 class BiometricResult {
   final bool isSuccess;
-  final String? error;
+  final String? errorMessage;
 
   BiometricResult._({
     required this.isSuccess,
-    this.error,
+    this.errorMessage,
   });
 
   factory BiometricResult.success() {
     return BiometricResult._(isSuccess: true);
   }
 
-  factory BiometricResult.failure(String error) {
-    return BiometricResult._(isSuccess: false, error: error);
-  }
-}
-
-/// PIN validation service
-class PinService {
-  static final PinService _instance = PinService._internal();
-  factory PinService() => _instance;
-  PinService._internal();
-
-  /// Validate PIN format (4 digits)
-  bool isValidPinFormat(String pin) {
-    return RegExp(r'^\d{4}$').hasMatch(pin);
-  }
-
-  /// Generate random 4-digit PIN for testing
-  String generateRandomPin() {
-    final random = DateTime.now().millisecondsSinceEpoch % 10000;
-    return random.toString().padLeft(4, '0');
-  }
-
-  /// Mask PIN for display
-  String maskPin(String pin) {
-    return '*' * pin.length;
-  }
-
-  /// Validate PIN strength (basic validation)
-  bool isStrongPin(String pin) {
-    // Basic strength validation - not all same digits
-    if (pin.length != 4) return false;
-    
-    // Check if all digits are the same
-    final firstDigit = pin[0];
-    for (int i = 1; i < pin.length; i++) {
-      if (pin[i] != firstDigit) return true;
-    }
-    
-    return false;
+  factory BiometricResult.failure(String message) {
+    return BiometricResult._(
+      isSuccess: false,
+      errorMessage: message,
+    );
   }
 }

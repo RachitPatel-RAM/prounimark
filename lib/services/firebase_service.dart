@@ -13,6 +13,13 @@ import '../models/hierarchy_model.dart';
 // import 'location_service.dart'; // Unused
 // import 'biometric_service.dart'; // Unused
 
+enum AttendanceStatus {
+  present,
+  absent,
+  late,
+  excused,
+}
+
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -183,7 +190,7 @@ class FirebaseService {
           .collection('sessions')
           .doc(attendance.sessionId)
           .collection('attendance')
-          .doc(attendance.studentUid)
+          .doc(attendance.studentId)
           .set(attendance.toFirestore());
     } catch (e) {
       throw Exception('Failed to mark attendance: $e');
@@ -212,8 +219,8 @@ class FirebaseService {
     try {
       final query = await _firestore
           .collectionGroup('attendance')
-          .where('studentUid', isEqualTo: studentId)
-          .orderBy('submittedAt', descending: true)
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('markedAt', descending: true)
           .get();
       
       return query.docs.map((doc) => AttendanceModel.fromFirestore(doc)).toList();

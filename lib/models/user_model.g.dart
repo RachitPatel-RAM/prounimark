@@ -39,6 +39,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
   isActive: json['isActive'] as bool? ?? true,
+  tempPassword: json['tempPassword'] as bool?,
+  lastLocation: json['lastLocation'] as String?,
 );
 
 Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
@@ -58,6 +60,8 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
   'createdAt': instance.createdAt.toIso8601String(),
   'updatedAt': instance.updatedAt.toIso8601String(),
   'isActive': instance.isActive,
+  'tempPassword': instance.tempPassword,
+  'lastLocation': instance.lastLocation,
 };
 
 const _$UserRoleEnumMap = {

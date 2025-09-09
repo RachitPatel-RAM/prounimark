@@ -1,123 +1,49 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
+import '../services/location_service.dart' as location_service;
+import '../services/location_service.dart';
 
 part 'attendance_model.g.dart';
 
-enum AttendanceResult { accepted, rejected }
-
-@JsonSerializable()
-class StudentLocation extends Equatable {
-  final double lat;
-  final double lng;
-  final double accM;
-
-  const StudentLocation({
-    required this.lat,
-    required this.lng,
-    required this.accM,
-  });
-
-  factory StudentLocation.fromJson(Map<String, dynamic> json) =>
-      _$StudentLocationFromJson(json);
-
-  Map<String, dynamic> toJson() => _$StudentLocationToJson(this);
-
-  factory StudentLocation.fromFirestore(Map<String, dynamic> data) {
-    return StudentLocation(
-      lat: data['lat'] ?? 0.0,
-      lng: data['lng'] ?? 0.0,
-      accM: data['accM'] ?? 0.0,
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'lat': lat,
-      'lng': lng,
-      'accM': accM,
-    };
-  }
-
-  @override
-  List<Object?> get props => [lat, lng, accM];
-}
-
-@JsonSerializable()
-class VerificationFlags extends Equatable {
-  final bool timeOk;
-  final bool codeOk;
-  final bool deviceOk;
-  final bool integrityOk;
-  final bool locationOk;
-
-  const VerificationFlags({
-    required this.timeOk,
-    required this.codeOk,
-    required this.deviceOk,
-    required this.integrityOk,
-    required this.locationOk,
-  });
-
-  factory VerificationFlags.fromJson(Map<String, dynamic> json) =>
-      _$VerificationFlagsFromJson(json);
-
-  Map<String, dynamic> toJson() => _$VerificationFlagsToJson(this);
-
-  factory VerificationFlags.fromFirestore(Map<String, dynamic> data) {
-    return VerificationFlags(
-      timeOk: data['timeOk'] ?? false,
-      codeOk: data['codeOk'] ?? false,
-      deviceOk: data['deviceOk'] ?? false,
-      integrityOk: data['integrityOk'] ?? false,
-      locationOk: data['locationOk'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'timeOk': timeOk,
-      'codeOk': codeOk,
-      'deviceOk': deviceOk,
-      'integrityOk': integrityOk,
-      'locationOk': locationOk,
-    };
-  }
-
-  @override
-  List<Object?> get props => [timeOk, codeOk, deviceOk, integrityOk, locationOk];
+enum AttendanceResult {
+  accepted,
+  rejected,
+  pending,
 }
 
 @JsonSerializable()
 class AttendanceModel extends Equatable {
   final String id;
   final String sessionId;
-  final String studentUid;
-  final String enrollmentNo;
-  final DateTime submittedAt;
-  final int responseCode;
-  final String deviceInstIdHash;
-  final StudentLocation location;
-  final VerificationFlags verified;
-  final AttendanceResult result;
-  final String? reason;
-  final String? editedBy;
-  final DateTime? editedAt;
+  final String studentId;
+  final String studentUid; // Add studentUid property
+  final DateTime markedAt;
+  final DateTime submittedAt; // Add submittedAt property
+  final location_service.LocationData location;
+  final double distance; // Distance from session location in meters
+  final bool isPresent;
+  final AttendanceResult result; // Add result property
+  final String? reason; // Add reason property
+  final String? editedBy; // Add editedBy property
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   const AttendanceModel({
     required this.id,
     required this.sessionId,
+    required this.studentId,
     required this.studentUid,
-    required this.enrollmentNo,
+    required this.markedAt,
     required this.submittedAt,
-    required this.responseCode,
-    required this.deviceInstIdHash,
     required this.location,
-    required this.verified,
+    required this.distance,
+    required this.isPresent,
     required this.result,
     this.reason,
     this.editedBy,
-    this.editedAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory AttendanceModel.fromJson(Map<String, dynamic> json) =>
@@ -130,71 +56,87 @@ class AttendanceModel extends Equatable {
     return AttendanceModel(
       id: doc.id,
       sessionId: data['sessionId'] ?? '',
-      studentUid: data['studentUid'] ?? '',
-      enrollmentNo: data['enrollmentNo'] ?? '',
-      submittedAt: (data['submittedAt'] as Timestamp).toDate(),
-      responseCode: data['responseCode'] ?? 0,
-      deviceInstIdHash: data['deviceInstIdHash'] ?? '',
-      location: StudentLocation.fromFirestore(data['location'] ?? {}),
-      verified: VerificationFlags.fromFirestore(data['verified'] ?? {}),
-      result: AttendanceResult.values.firstWhere(
-        (e) => e.toString() == 'AttendanceResult.${data['result']}',
-        orElse: () => AttendanceResult.rejected,
-      ),
+      studentId: data['studentId'] ?? '',
+      studentUid: data['studentUid'] ?? data['studentId'] ?? '',
+      markedAt: (data['markedAt'] as Timestamp).toDate(),
+      submittedAt: (data['submittedAt'] as Timestamp?)?.toDate() ?? (data['markedAt'] as Timestamp).toDate(),
+      location: location_service.LocationData.fromFirestore(data['location']),
+      distance: (data['distance'] ?? 0).toDouble(),
+      isPresent: data['isPresent'] ?? false,
+      result: _parseAttendanceResult(data['result'] ?? data['status']),
       reason: data['reason'],
       editedBy: data['editedBy'],
-      editedAt: data['editedAt'] != null 
-          ? (data['editedAt'] as Timestamp).toDate() 
-          : null,
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
+  }
+
+  static AttendanceResult _parseAttendanceResult(dynamic value) {
+    if (value == null) return AttendanceResult.pending;
+    if (value is String) {
+      switch (value.toLowerCase()) {
+        case 'accepted':
+        case 'present':
+          return AttendanceResult.accepted;
+        case 'rejected':
+        case 'absent':
+          return AttendanceResult.rejected;
+        default:
+          return AttendanceResult.pending;
+      }
+    }
+    return AttendanceResult.pending;
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'sessionId': sessionId,
+      'studentId': studentId,
       'studentUid': studentUid,
-      'enrollmentNo': enrollmentNo,
+      'markedAt': Timestamp.fromDate(markedAt),
       'submittedAt': Timestamp.fromDate(submittedAt),
-      'responseCode': responseCode,
-      'deviceInstIdHash': deviceInstIdHash,
       'location': location.toFirestore(),
-      'verified': verified.toFirestore(),
-      'result': result.toString().split('.').last,
+      'distance': distance,
+      'isPresent': isPresent,
+      'result': result.name,
       'reason': reason,
       'editedBy': editedBy,
-      'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
 
   AttendanceModel copyWith({
     String? id,
     String? sessionId,
+    String? studentId,
     String? studentUid,
-    String? enrollmentNo,
+    DateTime? markedAt,
     DateTime? submittedAt,
-    int? responseCode,
-    String? deviceInstIdHash,
-    StudentLocation? location,
-    VerificationFlags? verified,
+    location_service.LocationData? location,
+    double? distance,
+    bool? isPresent,
     AttendanceResult? result,
     String? reason,
     String? editedBy,
-    DateTime? editedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return AttendanceModel(
       id: id ?? this.id,
       sessionId: sessionId ?? this.sessionId,
+      studentId: studentId ?? this.studentId,
       studentUid: studentUid ?? this.studentUid,
-      enrollmentNo: enrollmentNo ?? this.enrollmentNo,
+      markedAt: markedAt ?? this.markedAt,
       submittedAt: submittedAt ?? this.submittedAt,
-      responseCode: responseCode ?? this.responseCode,
-      deviceInstIdHash: deviceInstIdHash ?? this.deviceInstIdHash,
       location: location ?? this.location,
-      verified: verified ?? this.verified,
+      distance: distance ?? this.distance,
+      isPresent: isPresent ?? this.isPresent,
       result: result ?? this.result,
       reason: reason ?? this.reason,
       editedBy: editedBy ?? this.editedBy,
-      editedAt: editedAt ?? this.editedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -202,19 +144,17 @@ class AttendanceModel extends Equatable {
   List<Object?> get props => [
         id,
         sessionId,
+        studentId,
         studentUid,
-        enrollmentNo,
+        markedAt,
         submittedAt,
-        responseCode,
-        deviceInstIdHash,
         location,
-        verified,
+        distance,
+        isPresent,
         result,
         reason,
         editedBy,
-        editedAt,
+        createdAt,
+        updatedAt,
       ];
 }
-
-// Legacy attendance status enum for backward compatibility
-enum AttendanceStatus { present, absent, late }

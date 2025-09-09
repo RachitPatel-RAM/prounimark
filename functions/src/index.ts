@@ -2,15 +2,21 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { adminLogin } from './auth/adminLogin';
 import { createFaculty } from './auth/createFaculty';
+import { updateFaculty } from './auth/updateFaculty';
+import { deleteFaculty } from './auth/deleteFaculty';
+import { getFacultyList } from './auth/getFacultyList';
+import { resetFacultyPassword } from './auth/resetFacultyPassword';
 import { completeStudentRegistration } from './auth/completeStudentRegistration';
 import { verifyPin } from './auth/verifyPin';
 import { resetDeviceBinding } from './auth/resetDeviceBinding';
+import { createFacultyUser } from './auth/createFacultyUser';
 import { createSession } from './sessions/createSession';
 import { submitAttendance } from './attendance/submitAttendance';
 import { closeSession } from './sessions/closeSession';
 import { editAttendance } from './attendance/editAttendance';
 import { lockSessions } from './sessions/lockSessions';
 import { getActiveSessions } from './sessions/getActiveSessions';
+import { validateSession } from './sessions/validateSession';
 import { verifyPlayIntegrity } from './security/verifyPlayIntegrity';
 import { auditLog } from './audit/auditLog';
 
@@ -20,14 +26,20 @@ admin.initializeApp();
 // Authentication Functions
 export const adminLoginFunction = functions.https.onCall(adminLogin);
 export const createFacultyFunction = functions.https.onCall(createFaculty);
+export const updateFacultyFunction = functions.https.onCall(updateFaculty);
+export const deleteFacultyFunction = functions.https.onCall(deleteFaculty);
+export const getFacultyListFunction = functions.https.onCall(getFacultyList);
+export const resetFacultyPasswordFunction = functions.https.onCall(resetFacultyPassword);
 export const completeStudentRegistrationFunction = functions.https.onCall(completeStudentRegistration);
 export const verifyPinFunction = functions.https.onCall(verifyPin);
 export const resetDeviceBindingFunction = functions.https.onCall(resetDeviceBinding);
+export const createFacultyUserFunction = functions.https.onCall(createFacultyUser);
 
 // Session Management Functions
 export const createSessionFunction = functions.https.onCall(createSession);
 export const closeSessionFunction = functions.https.onCall(closeSession);
 export const getActiveSessionsFunction = functions.https.onCall(getActiveSessions);
+export const validateSessionFunction = functions.https.onCall(validateSession);
 
 // Attendance Functions
 export const submitAttendanceFunction = functions.https.onCall(submitAttendance);

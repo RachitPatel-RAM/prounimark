@@ -44,12 +44,43 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
           _buildAdminUsernameField(),
           SizedBox(height: 3.h),
           _buildAdminPasswordField(),
+        ] else if (widget.selectedRole == 'Student') ...[
+          // Student uses Google Sign-In via the main login button
+          Container(
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: AppTheme.lightTheme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info,
+                  color: AppTheme.lightTheme.colorScheme.primary,
+                  size: 5.w,
+                ),
+                SizedBox(width: 2.w),
+                Expanded(
+                  child: Text(
+                    'Click the "Sign in with Google" button below to continue',
+                    style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ] else ...[
           _buildEmailField(),
           SizedBox(height: 3.h),
           _buildPasswordField(),
         ],
-        if (widget.selectedRole != 'Admin') ...[
+        if (widget.selectedRole == 'Faculty') ...[
           SizedBox(height: 2.h),
           _buildForgotPasswordLink(),
         ],
@@ -203,6 +234,7 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
       ],
     );
   }
+
 
   Widget _buildForgotPasswordLink() {
     return Align(

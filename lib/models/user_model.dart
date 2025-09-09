@@ -61,6 +61,8 @@ class UserModel extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
+  final bool? tempPassword; // For faculty - true until password is reset
+  final String? lastLocation; // For faculty - last known location
 
   const UserModel({
     required this.id,
@@ -79,6 +81,8 @@ class UserModel extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.isActive = true,
+    this.tempPassword,
+    this.lastLocation,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -110,6 +114,8 @@ class UserModel extends Equatable {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       isActive: data['isActive'] ?? true,
+      tempPassword: data['tempPassword'],
+      lastLocation: data['lastLocation'],
     );
   }
 
@@ -130,6 +136,8 @@ class UserModel extends Equatable {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isActive': isActive,
+      'tempPassword': tempPassword,
+      'lastLocation': lastLocation,
     };
   }
 
@@ -150,6 +158,8 @@ class UserModel extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
+    bool? tempPassword,
+    String? lastLocation,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -168,6 +178,8 @@ class UserModel extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
+      tempPassword: tempPassword ?? this.tempPassword,
+      lastLocation: lastLocation ?? this.lastLocation,
     );
   }
 
@@ -189,5 +201,7 @@ class UserModel extends Equatable {
         createdAt,
         updatedAt,
         isActive,
+        tempPassword,
+        lastLocation,
       ];
 }

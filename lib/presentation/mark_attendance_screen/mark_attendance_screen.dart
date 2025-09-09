@@ -112,14 +112,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   bool _verifyLocation(location_service.LocationData location) {
     return _locationService.isWithinRadius(
       location,
-      widget.session.facultyLocation,
-      widget.session.gpsRadiusM.toDouble(),
+      widget.session.gpsLocation,
+      widget.session.radius,
     );
   }
 
   void _verifyCode(String code) {
     setState(() {
-      _isCodeVerified = code == widget.session.code.toString().padLeft(3, '0');
+      _isCodeVerified = code == widget.session.sessionCode;
       if (!_isCodeVerified) {
         _errorMessage = 'Invalid attendance code. Please check with your faculty.';
       } else {
@@ -165,7 +165,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
       if (result.isSuccess) {
         Fluttertoast.showToast(
-          msg: result.message ?? 'Attendance marked successfully!',
+          msg: 'Attendance marked successfully!',
           toastLength: Toast.LENGTH_LONG,
           backgroundColor: AppTheme.successLight,
           textColor: Colors.white,
@@ -225,17 +225,19 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 isLoading: _isLoading,
                 errorMessage: _errorMessage,
                 onRetry: _getCurrentLocation,
-                sessionLocation: LocationData(
-                  latitude: widget.session.facultyLocation.lat,
-                  longitude: widget.session.facultyLocation.lng,
+                sessionLocation: location_service.LocationData(
+                  latitude: widget.session.gpsLocation.latitude,
+                  longitude: widget.session.gpsLocation.longitude,
+                  accuracy: widget.session.gpsLocation.accuracy,
                 ),
                 currentLocation: _currentLocation != null 
-                    ? LocationData(
+                    ? location_service.LocationData(
                         latitude: _currentLocation!.latitude,
                         longitude: _currentLocation!.longitude,
+                        accuracy: _currentLocation!.accuracy,
                       )
                     : null,
-                radius: widget.session.gpsRadiusM,
+                radius: widget.session.radius.toInt(),
               ),
               
               SizedBox(height: 4.h),

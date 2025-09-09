@@ -44,7 +44,7 @@ class SessionInfoWidget extends StatelessWidget {
                 SizedBox(width: 2.w),
                 Expanded(
                   child: Text(
-                    session.subject,
+                    session.course,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -58,7 +58,7 @@ class SessionInfoWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    session.status.toString().split('.').last.toUpperCase(),
+                    session.isActive ? 'ACTIVE' : 'INACTIVE',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -74,7 +74,7 @@ class SessionInfoWidget extends StatelessWidget {
               context,
               Icons.access_time,
               'Session Time',
-              '${_formatTime(session.startAt)} - ${_formatTime(session.expiresAt)}',
+              '${_formatTime(session.startTime)} - ${session.endTime != null ? _formatTime(session.endTime!) : 'Ongoing'}',
             ),
             
             SizedBox(height: 1.h),
@@ -83,7 +83,7 @@ class SessionInfoWidget extends StatelessWidget {
               context,
               Icons.location_on,
               'Location',
-              'Lat: ${session.facultyLocation.lat.toStringAsFixed(4)}, Lng: ${session.facultyLocation.lng.toStringAsFixed(4)}',
+              'Lat: ${session.gpsLocation.latitude.toStringAsFixed(4)}, Lng: ${session.gpsLocation.longitude.toStringAsFixed(4)}',
             ),
             
             SizedBox(height: 1.h),
@@ -92,7 +92,7 @@ class SessionInfoWidget extends StatelessWidget {
               context,
               Icons.radio_button_checked,
               'GPS Radius',
-              '${session.gpsRadiusM}m',
+              '${session.radius.toInt()}m',
             ),
             
             SizedBox(height: 2.h),
@@ -113,7 +113,7 @@ class SessionInfoWidget extends StatelessWidget {
                   ),
                   SizedBox(width: 2.w),
                   Text(
-                    'Session Code: ${session.code.toString().padLeft(3, '0')}',
+                    'Session Code: ${session.sessionCode ?? 'N/A'}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

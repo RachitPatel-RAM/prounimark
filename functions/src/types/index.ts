@@ -131,6 +131,26 @@ export interface CreateFacultyRequest {
   email: string;
   name: string;
   branchId?: string;
+  temporaryPassword?: string;
+}
+
+export interface UpdateFacultyRequest {
+  facultyId: string;
+  name?: string;
+}
+
+export interface DeleteFacultyRequest {
+  facultyId: string;
+}
+
+export interface GetFacultyListRequest {
+  searchQuery?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ResetFacultyPasswordRequest {
+  facultyId: string;
 }
 
 export interface CompleteStudentRegistrationRequest {
@@ -234,8 +254,8 @@ export const ERROR_CODES = {
 } as const;
 
 export const SYSTEM_CONSTANTS = {
-  ADMIN_ID: 'ADMIN404',
-  ADMIN_PASSWORD: 'ADMIN9090@@@@',
+  ADMIN_ID: 'ADMIN',
+  ADMIN_PASSWORD: 'ADMIN9090',
   UNIVERSITY_DOMAIN: '@darshan.ac.in',
   DEFAULT_SESSION_RADIUS: 500,
   DEFAULT_SESSION_TTL: 300, // 5 minutes

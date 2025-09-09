@@ -51,8 +51,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   // Admin credentials (static)
   final Map<String, String> _adminCredentials = {
-    'username': 'ADMIN404',
-    'password': 'ADMIN9090@@@@',
+    'username': 'ADMIN',
+    'password': 'ADMIN9090',
   };
 
   @override
@@ -168,6 +168,9 @@ class _LoginScreenState extends State<LoginScreen>
           _adminPasswordController.text.isNotEmpty &&
           _adminUsernameError == null &&
           _adminPasswordError == null;
+    } else if (_selectedRole == 'Student') {
+      // Students use Google Sign-In, so form is always valid
+      return true;
     } else {
       return _emailController.text.isNotEmpty &&
           _passwordController.text.isNotEmpty &&
@@ -218,8 +221,8 @@ class _LoginScreenState extends State<LoginScreen>
     HapticFeedback.lightImpact();
 
     try {
-      // For students, validate location access first
-      if (_selectedRole == 'Student') {
+      // For students and faculty, validate location access first
+      if (_selectedRole == 'Student' || _selectedRole == 'Faculty') {
         final locationResult = await _locationService.validateLocationAccess();
         if (!locationResult.isSuccess) {
           setState(() {
@@ -243,9 +246,15 @@ class _LoginScreenState extends State<LoginScreen>
       } else if (_selectedRole == 'Student') {
         // Student login with Google SSO
         result = await _authService.signInWithGoogle();
+      } else if (_selectedRole == 'Faculty') {
+        // Faculty login with email/password
+        result = await _authService.signInFacultyWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
       } else {
-        // Faculty login with Google SSO
-        result = await _authService.facultyLoginWithGoogle();
+        // Default fallback
+        result = AuthResult.failure('Invalid role selected');
       }
 
       if (result.isSuccess && result.user != null) {
@@ -259,7 +268,12 @@ class _LoginScreenState extends State<LoginScreen>
             route = '/student-dashboard';
             break;
           case UserRole.faculty:
-            route = '/faculty-dashboard';
+            // Check if faculty needs to change password
+            if (result.user!.tempPassword == true) {
+              route = '/faculty-password-reset';
+            } else {
+              route = '/faculty-dashboard';
+            }
             break;
           case UserRole.admin:
             route = '/admin-dashboard';
@@ -538,6 +552,7 @@ class _LoginScreenState extends State<LoginScreen>
                             isLoading: _isLoading,
                             isFormValid: _isFormValid,
                             onPressed: _handleLogin,
+                            selectedRole: _selectedRole,
                           ),
                         ],
                       ),

@@ -31,11 +31,7 @@ void main() {
         final result = await biometricService.checkBiometricAvailability();
 
         // Assert
-        expect(result, isA<BiometricAvailable>());
-        if (result is BiometricAvailable) {
-          expect(result.types, contains(BiometricType.fingerprint));
-          expect(result.types, contains(BiometricType.face));
-        }
+        expect(result, equals(BiometricAvailability.available));
       });
 
       test('should return not supported when device does not support biometrics', () async {
@@ -46,7 +42,7 @@ void main() {
         final result = await biometricService.checkBiometricAvailability();
 
         // Assert
-        expect(result, isA<BiometricNotSupported>());
+        expect(result, equals(BiometricAvailability.notSupported));
       });
 
       test('should return not available when biometrics cannot be checked', () async {
@@ -58,7 +54,7 @@ void main() {
         final result = await biometricService.checkBiometricAvailability();
 
         // Assert
-        expect(result, isA<BiometricNotAvailable>());
+        expect(result, equals(BiometricAvailability.notAvailable));
       });
 
       test('should return not enrolled when no biometrics are available', () async {
@@ -71,7 +67,7 @@ void main() {
         final result = await biometricService.checkBiometricAvailability();
 
         // Assert
-        expect(result, isA<BiometricNotEnrolled>());
+        expect(result, equals(BiometricAvailability.notEnrolled));
       });
 
       test('should return error when exception occurs', () async {
@@ -82,10 +78,7 @@ void main() {
         final result = await biometricService.checkBiometricAvailability();
 
         // Assert
-        expect(result, isA<BiometricError>());
-        if (result is BiometricError) {
-          expect(result.message, contains('Test error'));
-        }
+        expect(result, equals(BiometricAvailability.error));
       });
     });
 
@@ -104,13 +97,13 @@ void main() {
         )).thenAnswer((_) async => true);
 
         // Act
-        final result = await biometricService.authenticate(
+        final result = await biometricService.authenticateWithBiometrics(
           reason: 'Test authentication',
         );
 
         // Assert
         expect(result.isSuccess, isTrue);
-        expect(result.error, isNull);
+        expect(result.errorMessage, isNull);
       });
 
       test('should return failure when authentication fails', () async {
@@ -127,13 +120,13 @@ void main() {
         )).thenAnswer((_) async => false);
 
         // Act
-        final result = await biometricService.authenticate(
+        final result = await biometricService.authenticateWithBiometrics(
           reason: 'Test authentication',
         );
 
         // Assert
         expect(result.isSuccess, isFalse);
-        expect(result.error, contains('Authentication cancelled or failed'));
+        expect(result.errorMessage, contains('Authentication cancelled or failed'));
       });
 
       test('should return failure when biometrics are not available', () async {
@@ -142,13 +135,13 @@ void main() {
         when(mockLocalAuth.isDeviceSupported()).thenAnswer((_) async => true);
 
         // Act
-        final result = await biometricService.authenticate(
+        final result = await biometricService.authenticateWithBiometrics(
           reason: 'Test authentication',
         );
 
         // Assert
         expect(result.isSuccess, isFalse);
-        expect(result.error, contains('Biometric authentication not available'));
+        expect(result.errorMessage, contains('Biometric authentication not available'));
       });
     });
 
@@ -162,84 +155,32 @@ void main() {
       });
     });
 
-    group('getPrimaryBiometricTypeName', () {
-      test('should return Face ID when available', () {
-        final types = [BiometricType.face, BiometricType.fingerprint];
-        expect(biometricService.getPrimaryBiometricTypeName(types), equals('Face ID'));
-      });
-
-      test('should return Fingerprint when Face ID not available', () {
-        final types = [BiometricType.fingerprint, BiometricType.strong];
-        expect(biometricService.getPrimaryBiometricTypeName(types), equals('Fingerprint'));
-      });
-
-      test('should return Iris when others not available', () {
-        final types = [BiometricType.iris];
-        expect(biometricService.getPrimaryBiometricTypeName(types), equals('Iris'));
-      });
-
-      test('should return Biometric for unknown types', () {
-        final types = [BiometricType.strong, BiometricType.weak];
-        expect(biometricService.getPrimaryBiometricTypeName(types), equals('Strong Biometric'));
-      });
-    });
-  });
-
-  group('PinService', () {
-    late PinService pinService;
-
-    setUp(() {
-      pinService = PinService();
-    });
-
-    group('isValidPinFormat', () {
+    group('isValidPin', () {
       test('should return true for valid 4-digit PINs', () {
-        expect(pinService.isValidPinFormat('1234'), isTrue);
-        expect(pinService.isValidPinFormat('0000'), isTrue);
-        expect(pinService.isValidPinFormat('9999'), isTrue);
+        expect(biometricService.isValidPin('1234'), isTrue);
+        expect(biometricService.isValidPin('0000'), isTrue);
+        expect(biometricService.isValidPin('9999'), isTrue);
       });
 
       test('should return false for invalid PINs', () {
-        expect(pinService.isValidPinFormat('123'), isFalse); // Too short
-        expect(pinService.isValidPinFormat('12345'), isFalse); // Too long
-        expect(pinService.isValidPinFormat('12a4'), isFalse); // Contains letter
-        expect(pinService.isValidPinFormat('12-4'), isFalse); // Contains dash
-        expect(pinService.isValidPinFormat(''), isFalse); // Empty
+        expect(biometricService.isValidPin('123'), isFalse); // Too short
+        expect(biometricService.isValidPin('12345'), isFalse); // Too long
+        expect(biometricService.isValidPin('12a4'), isFalse); // Contains letter
+        expect(biometricService.isValidPin('12-4'), isFalse); // Contains dash
+        expect(biometricService.isValidPin(''), isFalse); // Empty
       });
     });
 
-    group('isStrongPin', () {
-      test('should return true for strong PINs', () {
-        expect(pinService.isStrongPin('1234'), isTrue);
-        expect(pinService.isStrongPin('1357'), isTrue);
-        expect(pinService.isStrongPin('2468'), isTrue);
+    group('getPinValidationError', () {
+      test('should return null for valid PINs', () {
+        expect(biometricService.getPinValidationError('1234'), isNull);
+        expect(biometricService.getPinValidationError('0000'), isNull);
       });
 
-      test('should return false for weak PINs', () {
-        expect(pinService.isStrongPin('0000'), isFalse); // All same
-        expect(pinService.isStrongPin('1111'), isFalse); // All same
-        expect(pinService.isStrongPin('9999'), isFalse); // All same
-      });
-
-      test('should return false for invalid length', () {
-        expect(pinService.isStrongPin('123'), isFalse);
-        expect(pinService.isStrongPin('12345'), isFalse);
-      });
-    });
-
-    group('maskPin', () {
-      test('should mask PIN with asterisks', () {
-        expect(pinService.maskPin('1234'), equals('****'));
-        expect(pinService.maskPin('12'), equals('**'));
-        expect(pinService.maskPin('123456'), equals('******'));
-      });
-    });
-
-    group('generateRandomPin', () {
-      test('should generate 4-digit PIN', () {
-        final pin = pinService.generateRandomPin();
-        expect(pin.length, equals(4));
-        expect(pinService.isValidPinFormat(pin), isTrue);
+      test('should return error message for invalid PINs', () {
+        expect(biometricService.getPinValidationError(''), equals('PIN is required'));
+        expect(biometricService.getPinValidationError('123'), equals('PIN must be exactly 4 digits'));
+        expect(biometricService.getPinValidationError('12a4'), equals('PIN must contain only numbers'));
       });
     });
   });

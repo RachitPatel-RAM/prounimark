@@ -1,318 +1,367 @@
-// import 'dart:convert'; // Unused
-// import 'package:http/http.dart' as http; // Unused
-// import 'package:firebase_app_check/firebase_app_check.dart'; // Unused
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/session_model.dart';
-import '../models/attendance_model.dart';
-import 'auth_service.dart';
-import 'location_service.dart';
-import 'biometric_service.dart';
+import '../models/attendance_model.dart' as attendance_model;
+import 'location_service.dart' as location_service;
 
 class AttendanceService {
   static final AttendanceService _instance = AttendanceService._internal();
   factory AttendanceService() => _instance;
   AttendanceService._internal();
 
-  // final FirebaseFunctions _functions = FirebaseFunctions.instance; // Discontinued
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final AuthService _authService = AuthService();
-  final LocationService _locationService = LocationService();
-  final BiometricService _biometricService = BiometricService();
 
-  /// Submit attendance with full verification pipeline
-  Future<AttendanceSubmissionResult> submitAttendance({
+  /// Create a new attendance session
+  Future<AttendanceResult> createSession(SessionModel session) async {
+    try {
+      // Generate unique session code
+      final sessionCode = _generateSessionCode();
+      
+      // Create session document
+      final sessionData = session.copyWith(
+        sessionCode: sessionCode,
+        startTime: DateTime.now(),
+        isActive: true,
+      );
+
+      final docRef = await _firestore.collection('sessions').add(sessionData.toFirestore());
+      
+      // Update session with generated ID
+      await _firestore.collection('sessions').doc(docRef.id).update({
+        'id': docRef.id,
+      });
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'SESSION_CREATED',
+        'facultyUid': session.facultyId,
+        'sessionId': docRef.id,
+        'sessionCode': sessionCode,
+        'course': session.course,
+        'className': session.className,
+        'timestamp': DateTime.now(),
+      });
+
+      return AttendanceResult.success(sessionData.copyWith(id: docRef.id));
+    } catch (e) {
+      return AttendanceResult.failure('Failed to create session: $e');
+    }
+  }
+
+  /// Get active session for a faculty member
+  Future<SessionModel?> getActiveSession(String facultyId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('sessions')
+          .where('facultyId', isEqualTo: facultyId)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        return null;
+      }
+
+      return SessionModel.fromFirestore(querySnapshot.docs.first);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get session by ID
+  Future<SessionModel?> getSession(String sessionId) async {
+    try {
+      final doc = await _firestore.collection('sessions').doc(sessionId).get();
+      if (!doc.exists) {
+        return null;
+      }
+      return SessionModel.fromFirestore(doc);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get all sessions for a faculty member
+  Future<List<SessionModel>> getFacultySessions(String facultyId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('sessions')
+          .where('facultyId', isEqualTo: facultyId)
+          .orderBy('startTime', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => SessionModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// End an active session
+  Future<AttendanceResult> endSession(String sessionId) async {
+    try {
+      final session = await getSession(sessionId);
+      if (session == null) {
+        return AttendanceResult.failure('Session not found');
+      }
+
+      if (!session.isActive) {
+        return AttendanceResult.failure('Session is already ended');
+      }
+
+      await _firestore.collection('sessions').doc(sessionId).update({
+        'endTime': DateTime.now(),
+        'isActive': false,
+        'updatedAt': DateTime.now(),
+      });
+
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'SESSION_ENDED',
+        'facultyUid': session.facultyId,
+        'sessionId': sessionId,
+        'studentsPresent': session.studentsPresent.length,
+        'timestamp': DateTime.now(),
+      });
+
+      return AttendanceResult.success(session);
+    } catch (e) {
+      return AttendanceResult.failure('Failed to end session: $e');
+    }
+  }
+
+  /// Mark student attendance
+  Future<AttendanceResult> markAttendance({
     required String sessionId,
-    required int responseCode,
-    required bool useBiometric,
-    String? pin,
+    required String studentId,
+    required location_service.LocationData studentLocation,
   }) async {
     try {
-      // Get current user
-      final user = _authService.currentUser;
-      if (user == null) {
-        return AttendanceSubmissionResult.failure('User not authenticated');
+      final session = await getSession(sessionId);
+      if (session == null) {
+        return AttendanceResult.failure('Session not found');
       }
 
-      // Get user model
-      final userModel = await _authService.getCurrentUserModel();
-      if (userModel == null) {
-        return AttendanceSubmissionResult.failure('User data not found');
+      if (!session.isActive) {
+        return AttendanceResult.failure('Session is not active');
       }
 
-      // Get session data
-      final sessionDoc = await _firestore.collection('sessions').doc(sessionId).get();
-      if (!sessionDoc.exists) {
-        return AttendanceSubmissionResult.failure('Session not found');
+      // Check if session code is still valid (5 minutes)
+      final sessionAge = DateTime.now().difference(session.startTime);
+      if (sessionAge.inMinutes > 5) {
+        return AttendanceResult.failure('Session code has expired');
       }
 
-      final session = SessionModel.fromFirestore(sessionDoc);
-
-      // Verify session is active and not expired
-      if (session.status != SessionStatus.open) {
-        return AttendanceSubmissionResult.failure('Session is not active');
+      // Check if student is already marked present
+      if (session.studentsPresent.contains(studentId)) {
+        return AttendanceResult.failure('Attendance already marked');
       }
 
-      if (DateTime.now().isAfter(session.expiresAt)) {
-        return AttendanceSubmissionResult.failure('Session has expired');
-      }
-
-      // Verify user belongs to session
-      if (!_isUserEligibleForSession(userModel, session)) {
-        return AttendanceSubmissionResult.failure('You are not eligible for this session');
-      }
-
-      // Get current location
-      final locationResult = await _locationService.verifyLocationForAttendance(
-        session.facultyLocation,
-        session.gpsRadiusM.toDouble(),
+      // Validate location (within 500m radius)
+      final distance = _calculateDistance(
+        session.gpsLocation.latitude,
+        session.gpsLocation.longitude,
+        studentLocation.latitude,
+        studentLocation.longitude,
       );
 
-      if (!locationResult.isSuccess) {
-        return AttendanceSubmissionResult.failure(locationResult.error!);
+      if (distance > session.radius) {
+        return AttendanceResult.failure('You are outside the attendance radius (${distance.toStringAsFixed(0)}m away)');
       }
 
-      // Authenticate user (biometric or PIN)
-      bool authSuccess = false;
-      if (useBiometric) {
-        final biometricResult = await _biometricService.authenticate(
-          reason: 'Authenticate to mark attendance for ${session.subject}',
-        );
-        authSuccess = biometricResult.isSuccess;
-      } else if (pin != null) {
-        authSuccess = await _authService.verifyPin(pin);
-      }
+      // Add student to present list
+      await _firestore.collection('sessions').doc(sessionId).update({
+        'studentsPresent': FieldValue.arrayUnion([studentId]),
+        'updatedAt': DateTime.now(),
+      });
 
-      if (!authSuccess) {
-        return AttendanceSubmissionResult.failure('Authentication failed');
-      }
-
-      // Get device binding info
-      final deviceInfo = await _authService.getDeviceBindingInfo();
-      if (deviceInfo == null) {
-        return AttendanceSubmissionResult.failure('Device binding not found');
-      }
-
-      // For development: Direct attendance submission
-      // In production, this should call your deployed Cloud Function via HTTP
-      final attendanceId = _firestore.collection('attendance').doc().id;
-      
-      final attendance = AttendanceModel(
-        id: attendanceId,
+      // Create attendance record
+      final attendance = attendance_model.AttendanceModel(
+        id: '',
         sessionId: sessionId,
-        studentUid: user.uid,
-        enrollmentNo: userModel.enrollmentNo ?? '',
+        studentId: studentId,
+        studentUid: studentId,
+        markedAt: DateTime.now(),
         submittedAt: DateTime.now(),
-        responseCode: responseCode,
-        deviceInstIdHash: deviceInfo.instIdHash,
-        location: StudentLocation(
-          lat: locationResult.location!.latitude,
-          lng: locationResult.location!.longitude,
-          accM: locationResult.location!.accuracy,
-        ),
-        verified: VerificationFlags(
-          timeOk: true,
-          codeOk: true,
-          deviceOk: true,
-          integrityOk: true,
-          locationOk: true,
-        ),
-        result: AttendanceResult.accepted, // For development, always accept
+        location: studentLocation,
+        distance: distance,
+        isPresent: true,
+        result: attendance_model.AttendanceResult.accepted,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
-      // Store attendance in Firestore
-      await _firestore.collection('attendance').doc(attendanceId).set(attendance.toFirestore());
-      
-      return AttendanceSubmissionResult.success(
-        attendanceId,
-        'Attendance marked successfully',
-      );
+      await _firestore.collection('attendance').add(attendance.toFirestore());
 
+      // Log the action
+      await _firestore.collection('auditLogs').add({
+        'eventType': 'ATTENDANCE_MARKED',
+        'sessionId': sessionId,
+        'studentId': studentId,
+        'distance': distance,
+        'timestamp': DateTime.now(),
+      });
+
+      return AttendanceResult.success(session);
     } catch (e) {
-      return AttendanceSubmissionResult.failure('Attendance submission failed: $e');
+      return AttendanceResult.failure('Failed to mark attendance: $e');
     }
   }
 
-  /// Check if user is eligible for session
-  bool _isUserEligibleForSession(UserModel user, SessionModel session) {
-    // Check if user belongs to the session's branch, class, and batch
-    return user.branch == session.branchId &&
-           user.classId == session.classId &&
-           session.batchIds.contains(user.batchId);
-  }
-
-  /// Get active sessions for current user
-  Future<List<SessionModel>> getActiveSessionsForUser() async {
+  /// Get attendance records for a session
+  Future<List<attendance_model.AttendanceModel>> getSessionAttendance(String sessionId) async {
     try {
-      final userModel = await _authService.getCurrentUserModel();
-      if (userModel == null || userModel.role != UserRole.student) {
-        return [];
-      }
-
-      final query = await _firestore
-          .collection('sessions')
-          .where('status', isEqualTo: 'open')
-          .where('branchId', isEqualTo: userModel.branch)
-          .where('classId', isEqualTo: userModel.classId)
-          .where('batchIds', arrayContains: userModel.batchId)
-          .where('expiresAt', isGreaterThan: Timestamp.now())
-          .get();
-
-      return query.docs.map((doc) => SessionModel.fromFirestore(doc)).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get attendance history for current user
-  Future<List<AttendanceModel>> getAttendanceHistory() async {
-    try {
-      final user = _authService.currentUser;
-      if (user == null) return [];
-
-      final query = await _firestore
-          .collectionGroup('attendance')
-          .where('studentUid', isEqualTo: user.uid)
-          .orderBy('submittedAt', descending: true)
-          .limit(50)
-          .get();
-
-      return query.docs.map((doc) => AttendanceModel.fromFirestore(doc)).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get session attendance (for faculty/admin)
-  Future<List<AttendanceModel>> getSessionAttendance(String sessionId) async {
-    try {
-      final query = await _firestore
-          .collection('sessions')
-          .doc(sessionId)
+      final querySnapshot = await _firestore
           .collection('attendance')
-          .orderBy('submittedAt', descending: true)
+          .where('sessionId', isEqualTo: sessionId)
+          .orderBy('markedAt', descending: true)
           .get();
 
-      return query.docs.map((doc) => AttendanceModel.fromFirestore(doc)).toList();
+      return querySnapshot.docs
+          .map((doc) => attendance_model.AttendanceModel.fromFirestore(doc))
+          .toList();
     } catch (e) {
       return [];
     }
   }
 
-  /// Check if user has already submitted attendance for session
+  /// Get student attendance history
+  Future<List<attendance_model.AttendanceModel>> getStudentAttendance(String studentId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('attendance')
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('markedAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => attendance_model.AttendanceModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Generate a unique 3-digit session code
+  String _generateSessionCode() {
+    final random = Random();
+    return (100 + random.nextInt(900)).toString(); // 100-999
+  }
+
+  /// Calculate distance between two coordinates in meters
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+    
+    final double dLat = _degreesToRadians(lat2 - lat1);
+    final double dLon = _degreesToRadians(lon2 - lon1);
+    
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
+        sin(dLon / 2) * sin(dLon / 2);
+    
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    
+    return earthRadius * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * (pi / 180);
+  }
+
+  /// Check if student has already submitted attendance for a session
   Future<bool> hasAlreadySubmitted(String sessionId) async {
     try {
-      final user = _authService.currentUser;
-      if (user == null) return false;
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return false;
 
-      final doc = await _firestore
-          .collection('sessions')
-          .doc(sessionId)
+      final querySnapshot = await _firestore
           .collection('attendance')
-          .doc(user.uid)
+          .where('sessionId', isEqualTo: sessionId)
+          .where('studentId', isEqualTo: currentUser.uid)
+          .limit(1)
           .get();
 
-      return doc.exists;
+      return querySnapshot.docs.isNotEmpty;
     } catch (e) {
       return false;
     }
   }
 
-  /// Get attendance statistics for user
-  Future<AttendanceStats> getAttendanceStats() async {
+  /// Submit attendance for a student
+  Future<AttendanceResult> submitAttendance({
+    required String sessionId,
+    required int responseCode,
+    required bool useBiometric,
+  }) async {
     try {
-      final user = _authService.currentUser;
-      if (user == null) {
-        return AttendanceStats.empty();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        return AttendanceResult.failure('User not authenticated');
       }
 
-      final query = await _firestore
-          .collectionGroup('attendance')
-          .where('studentUid', isEqualTo: user.uid)
-          .get();
+      // Get current location
+      final locationResult = await location_service.LocationService().getCurrentLocation();
+      if (!locationResult.isSuccess) {
+        return AttendanceResult.failure(locationResult.error!);
+      }
 
-      int totalSessions = query.docs.length;
-      int presentCount = query.docs
-          .where((doc) => doc.data()['result'] == 'accepted')
-          .length;
-
-      double attendancePercentage = totalSessions > 0 
-          ? (presentCount / totalSessions) * 100 
-          : 0.0;
-
-      return AttendanceStats(
-        totalSessions: totalSessions,
-        presentCount: presentCount,
-        absentCount: totalSessions - presentCount,
-        attendancePercentage: attendancePercentage,
+      // Mark attendance
+      final result = await markAttendance(
+        sessionId: sessionId,
+        studentId: currentUser.uid,
+        studentLocation: locationResult.location!,
       );
+
+      if (result.isSuccess) {
+        return AttendanceResult.success('Attendance marked successfully');
+      } else {
+        return AttendanceResult.failure(result.error!);
+      }
     } catch (e) {
-      return AttendanceStats.empty();
+      return AttendanceResult.failure('Failed to submit attendance: $e');
     }
   }
 
-  /// Validate session code format
-  bool isValidSessionCode(String code) {
-    return RegExp(r'^\d{3}$').hasMatch(code);
-  }
+  /// Get attendance history for current user
+  Future<List<attendance_model.AttendanceModel>> getAttendanceHistory() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return [];
 
-  /// Parse session code to integer
-  int? parseSessionCode(String code) {
-    if (!isValidSessionCode(code)) return null;
-    return int.tryParse(code);
+      final querySnapshot = await _firestore
+          .collection('attendance')
+          .where('studentId', isEqualTo: currentUser.uid)
+          .orderBy('markedAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => attendance_model.AttendanceModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
 
-/// Attendance submission result
-class AttendanceSubmissionResult {
+/// Result class for attendance operations
+class AttendanceResult {
   final bool isSuccess;
   final String? error;
-  final String? attendanceId;
-  final String? message;
+  final dynamic data;
 
-  AttendanceSubmissionResult._({
+  AttendanceResult._({
     required this.isSuccess,
     this.error,
-    this.attendanceId,
-    this.message,
+    this.data,
   });
 
-  factory AttendanceSubmissionResult.success(String attendanceId, String message) {
-    return AttendanceSubmissionResult._(
-      isSuccess: true,
-      attendanceId: attendanceId,
-      message: message,
-    );
+  factory AttendanceResult.success(dynamic data) {
+    return AttendanceResult._(isSuccess: true, data: data);
   }
 
-  factory AttendanceSubmissionResult.failure(String error) {
-    return AttendanceSubmissionResult._(
-      isSuccess: false,
-      error: error,
-    );
-  }
-}
-
-/// Attendance statistics
-class AttendanceStats {
-  final int totalSessions;
-  final int presentCount;
-  final int absentCount;
-  final double attendancePercentage;
-
-  AttendanceStats({
-    required this.totalSessions,
-    required this.presentCount,
-    required this.absentCount,
-    required this.attendancePercentage,
-  });
-
-  factory AttendanceStats.empty() {
-    return AttendanceStats(
-      totalSessions: 0,
-      presentCount: 0,
-      absentCount: 0,
-      attendancePercentage: 0.0,
-    );
+  factory AttendanceResult.failure(String error) {
+    return AttendanceResult._(isSuccess: false, error: error);
   }
 }

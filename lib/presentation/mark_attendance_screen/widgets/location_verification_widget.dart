@@ -1,15 +1,16 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
-import '../../../models/session_model.dart';
+import '../../../services/location_service.dart' as location_service;
 
 class LocationVerificationWidget extends StatelessWidget {
   final bool isLocationVerified;
   final bool isLoading;
   final String errorMessage;
   final VoidCallback onRetry;
-  final LocationData sessionLocation;
-  final LocationData? currentLocation;
+  final location_service.LocationData sessionLocation;
+  final location_service.LocationData? currentLocation;
   final int radius;
 
   const LocationVerificationWidget({
@@ -155,7 +156,13 @@ class LocationVerificationWidget extends StatelessWidget {
   }
 
   Widget _buildLocationInfo(BuildContext context) {
-    final distance = currentLocation!.distanceTo(sessionLocation);
+    // Calculate distance using Haversine formula
+    final distance = _calculateDistance(
+      currentLocation!.latitude,
+      currentLocation!.longitude,
+      sessionLocation.latitude,
+      sessionLocation.longitude,
+    );
     final isWithinRadius = distance <= radius;
     
     return Column(
@@ -306,5 +313,21 @@ class LocationVerificationWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+    
+    final double lat1Rad = lat1 * (pi / 180);
+    final double lat2Rad = lat2 * (pi / 180);
+    final double deltaLatRad = (lat2 - lat1) * (pi / 180);
+    final double deltaLonRad = (lon2 - lon1) * (pi / 180);
+
+    final double a = sin(deltaLatRad / 2) * sin(deltaLatRad / 2) +
+        cos(lat1Rad) * cos(lat2Rad) *
+        sin(deltaLonRad / 2) * sin(deltaLonRad / 2);
+    final double c = 2 * asin(sqrt(a));
+
+    return earthRadius * c;
   }
 }

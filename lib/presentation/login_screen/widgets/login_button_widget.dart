@@ -7,12 +7,14 @@ class LoginButtonWidget extends StatelessWidget {
   final bool isLoading;
   final bool isFormValid;
   final VoidCallback onPressed;
+  final String selectedRole;
 
   const LoginButtonWidget({
     super.key,
     required this.isLoading,
     required this.isFormValid,
     required this.onPressed,
+    required this.selectedRole,
   });
 
   @override
@@ -60,7 +62,7 @@ class LoginButtonWidget extends StatelessWidget {
                   ),
                   SizedBox(width: 2.w),
                   Text(
-                    'Login',
+                    selectedRole == 'Student' ? 'Sign in with Google' : 'Login',
                     style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
                       color: isFormValid
                           ? AppTheme.lightTheme.colorScheme.onPrimary

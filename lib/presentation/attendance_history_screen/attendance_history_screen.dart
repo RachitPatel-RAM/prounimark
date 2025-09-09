@@ -4,7 +4,7 @@ import 'package:sizer/sizer.dart';
 import '../../core/app_export.dart';
 import '../../models/attendance_model.dart';
 import '../../models/user_model.dart';
-import '../../services/attendance_service.dart';
+import '../../services/attendance_service.dart' as attendance_service;
 import 'widgets/attendance_stats_widget.dart';
 import 'widgets/attendance_list_widget.dart';
 import 'widgets/attendance_chart_widget.dart';
@@ -24,7 +24,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen>
     with TickerProviderStateMixin {
-  final AttendanceService _attendanceService = AttendanceService();
+  final attendance_service.AttendanceService _attendanceService = attendance_service.AttendanceService();
   
   late TabController _tabController;
   List<AttendanceModel> _attendanceHistory = [];
