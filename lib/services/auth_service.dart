@@ -128,37 +128,44 @@ class AuthService {
   /// Admin login with static credentials
   Future<AuthResult> adminLogin(String adminId, String password) async {
     try {
-      // For now, use direct admin creation since cloud functions might not be deployed
-      // In production, this should call the deployed cloud function
+      // Validate admin credentials
       if (adminId != 'ADMIN' || password != 'ADMIN9090') {
         return AuthResult.failure('Invalid admin credentials');
       }
 
-      // Check if admin user exists in Firestore
-      final adminDoc = await _firestore.collection('users').doc('admin').get();
-      
-      if (!adminDoc.exists) {
-        // Create admin user if it doesn't exist
-        final adminUser = UserModel(
-          id: 'admin',
-          name: 'System Administrator',
-          email: 'admin@darshan.ac.in',
-          role: UserRole.admin,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        
-        // Store admin user in Firestore
-        await _firestore.collection('users').doc('admin').set(adminUser.toFirestore());
-        return AuthResult.success(adminUser);
-      } else {
-        // Admin user exists, return it
-        final adminUser = UserModel.fromFirestore(adminDoc);
-        return AuthResult.success(adminUser);
-      }
+      // Create admin user model
+      final adminUser = UserModel(
+        id: 'admin',
+        name: 'System Administrator',
+        email: 'admin@darshan.ac.in',
+        role: UserRole.admin,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Ensure admin user document exists in Firestore
+      await _ensureAdminUserExists(adminUser);
+
+      return AuthResult.success(adminUser);
 
     } catch (e) {
       return AuthResult.failure('Admin login failed: $e');
+    }
+  }
+
+  /// Ensure admin user document exists in Firestore
+  Future<void> _ensureAdminUserExists(UserModel adminUser) async {
+    try {
+      final adminDoc = await _firestore.collection('users').doc('admin').get();
+      
+      if (!adminDoc.exists) {
+        // Create admin user document
+        await _firestore.collection('users').doc('admin').set(adminUser.toFirestore());
+      }
+    } catch (e) {
+      // If we can't create the admin user document, log the error but don't fail the login
+      // This allows the admin to still login and potentially fix the issue
+      print('Warning: Could not ensure admin user document exists: $e');
     }
   }
 

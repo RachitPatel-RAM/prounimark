@@ -112,7 +112,12 @@ service cloud.firestore {
                       // Allow admin user creation for system initialization (no auth required)
                       (userId == 'admin' && 
                        request.resource.data.role == 'admin' &&
-                       request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt', 'updatedAt']));
+                       request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt', 'updatedAt'])) ||
+                      // Allow admin user creation when no admin exists yet (for initial setup)
+                      (userId == 'admin' && 
+                       request.resource.data.role == 'admin' &&
+                       request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt', 'updatedAt']) &&
+                       !exists(/databases/$(database)/documents/users/admin));
       
       // Allow update only by admin or for security-related fields
       allow update: if (isAdmin() || 
