@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../firebase_options.dart';
 
 class FirebaseConfig {
   static FirebaseApp? _app;
@@ -10,7 +11,9 @@ class FirebaseConfig {
   /// Initialize Firebase
   static Future<void> initialize() async {
     if (_app == null) {
-      _app = await Firebase.initializeApp();
+      _app = await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       _auth = FirebaseAuth.instance;
       _firestore = FirebaseFirestore.instance;
       

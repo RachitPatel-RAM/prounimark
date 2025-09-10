@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "unimark-attendance",
+    "default": "unimark-ffb10",
     "staging": "unimark-attendance-staging",
     "production": "unimark-attendance-prod"
   },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
+import '../../../widgets/secure_text_field.dart';
 
 class RegistrationFormWidget extends StatefulWidget {
   final GlobalKey<FormState> formKey;
@@ -175,49 +176,17 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
           SizedBox(height: 3.h),
 
           // Enrollment Number Field
-          TextFormField(
+          SecureTextField(
             controller: widget.enrollmentController,
-            decoration: InputDecoration(
-              labelText: 'Enrollment Number',
-              hintText: 'Enter your enrollment number',
-              prefixIcon: Icon(
-                Icons.badge_outlined,
-                color: _isEnrollmentValid
-                    ? AppTheme.lightTheme.colorScheme.primary
-                    : AppTheme.lightTheme.colorScheme.onSurfaceVariant,
-              ),
-              suffixIcon: _isEnrollmentValid
-                  ? Icon(
-                      Icons.check_circle,
-                      color: AppTheme.successLight,
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.outline,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.primary,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.error,
-                ),
-              ),
-            ),
+            labelText: 'Enrollment Number',
+            hintText: 'Enter your enrollment number',
+            prefixIcon: Icons.badge_outlined,
             validator: _validateEnrollmentField,
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.next,
+            keyboardType: TextInputType.text,
+            showSuffixIcon: true,
+            suffixIconColor: AppTheme.successLight,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],
@@ -225,49 +194,17 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
           SizedBox(height: 3.h),
 
           // Confirm Enrollment Number Field
-          TextFormField(
+          SecureTextField(
             controller: widget.confirmEnrollmentController,
-            decoration: InputDecoration(
-              labelText: 'Confirm Enrollment Number',
-              hintText: 'Re-enter your enrollment number',
-              prefixIcon: Icon(
-                Icons.verified_user_outlined,
-                color: _isConfirmEnrollmentValid
-                    ? AppTheme.lightTheme.colorScheme.primary
-                    : AppTheme.lightTheme.colorScheme.onSurfaceVariant,
-              ),
-              suffixIcon: _isConfirmEnrollmentValid
-                  ? Icon(
-                      Icons.check_circle,
-                      color: AppTheme.successLight,
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.outline,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.primary,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.error,
-                ),
-              ),
-            ),
+            labelText: 'Confirm Enrollment Number',
+            hintText: 'Re-enter your enrollment number',
+            prefixIcon: Icons.verified_user_outlined,
             validator: _validateConfirmEnrollmentField,
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.done,
+            keyboardType: TextInputType.text,
+            showSuffixIcon: true,
+            suffixIconColor: AppTheme.successLight,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],

@@ -52,15 +52,10 @@ service cloud.firestore {
       let lat2 = userLocation.latitude;
       let lng2 = userLocation.longitude;
       
-      // Haversine formula for distance calculation
-      let R = 6371000; // Earth's radius in meters
-      let dLat = (lat2 - lat1) * 3.14159265359 / 180;
-      let dLng = (lng2 - lng1) * 3.14159265359 / 180;
-      let a = math.sin(dLat/2) * math.sin(dLat/2) +
-              math.cos(lat1 * 3.14159265359 / 180) * math.cos(lat2 * 3.14159265359 / 180) *
-              math.sin(dLng/2) * math.sin(dLng/2);
-      let c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a));
-      let distance = R * c;
+      // Simple distance calculation (approximation)
+      let latDiff = lat2 - lat1;
+      let lngDiff = lng2 - lng1;
+      let distance = math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000; // Rough conversion to meters
       
       return distance <= radius;
     }
@@ -91,16 +86,16 @@ service cloud.firestore {
       return !exists(/databases/$(database)/documents/attendance/$(sessionId + '_' + request.auth.uid));
     }
     
-    function isValidTimestamp(timestamp) {
+    function isValidTimestamp(attendanceTime) {
       let now = request.time;
-      let diff = now.seconds - timestamp.seconds;
+      let diff = now.seconds - attendanceTime.seconds;
       return diff >= 0 && diff <= 300; // Within 5 minutes
     }
 
     // Users collection
     match /users/{userId} {
       // Allow read access to own data or by admin
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin() || (isAuthenticated() && userId == 'admin');
       
       // Allow write access only during registration or by admin
       allow create: if (isAuthenticated() && 
@@ -114,7 +109,7 @@ service cloud.firestore {
                       (isAdmin() && 
                        request.resource.data.role in ['faculty', 'admin'] &&
                        request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt', 'updatedAt'])) ||
-                      // Allow admin user creation for system initialization
+                      // Allow admin user creation for system initialization (no auth required)
                       (userId == 'admin' && 
                        request.resource.data.role == 'admin' &&
                        request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt', 'updatedAt']));
