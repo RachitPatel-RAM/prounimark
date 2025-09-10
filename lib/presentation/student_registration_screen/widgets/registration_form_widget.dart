@@ -166,6 +166,7 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
             keyboardType: TextInputType.text,
             showSuffixIcon: true,
             suffixIconColor: AppTheme.successLight,
+            disableCopyPaste: false, // Allow copy/paste for convenience
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],
@@ -184,6 +185,7 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
             keyboardType: TextInputType.text,
             showSuffixIcon: true,
             suffixIconColor: AppTheme.successLight,
+            disableCopyPaste: true, // Disable copy/paste for security
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],
@@ -225,7 +227,8 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
                 SizedBox(height: 1.h),
                 Text(
                   '• Your enrollment number must be unique and will be verified\n'
-                  '• Copy-paste is disabled for security reasons\n'
+                  '• Copy-paste is disabled in the confirmation field for security\n'
+                  '• You must type the enrollment number twice to confirm accuracy\n'
                   '• Please double-check your enrollment number before proceeding',
                   style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.lightTheme.colorScheme.primary,

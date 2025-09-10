@@ -15,6 +15,7 @@ class SecureTextField extends StatefulWidget {
   final Color? suffixIconColor;
   final VoidCallback? onTap;
   final bool enabled;
+  final bool disableCopyPaste;
 
   const SecureTextField({
     super.key,
@@ -31,6 +32,7 @@ class SecureTextField extends StatefulWidget {
     this.suffixIconColor,
     this.onTap,
     this.enabled = true,
+    this.disableCopyPaste = true,
   });
 
   @override
@@ -39,11 +41,13 @@ class SecureTextField extends StatefulWidget {
 
 class _SecureTextFieldState extends State<SecureTextField> {
   bool _isValid = false;
+  String _previousText = '';
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_validateField);
+    _previousText = widget.controller.text;
   }
 
   @override
@@ -56,6 +60,44 @@ class _SecureTextFieldState extends State<SecureTextField> {
     setState(() {
       _isValid = widget.controller.text.trim().isNotEmpty;
     });
+  }
+
+  void _handleTextChange(String newText) {
+    if (!widget.disableCopyPaste) {
+      _previousText = newText;
+      return;
+    }
+
+    // Check if this is a paste operation (sudden large text change)
+    if (newText.length > _previousText.length + 1) {
+      // Likely a paste operation, revert to previous text
+      widget.controller.text = _previousText;
+      widget.controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _previousText.length),
+      );
+      return;
+    }
+
+    // Check for copy/paste using clipboard
+    _checkClipboardOperation(newText);
+    _previousText = newText;
+  }
+
+  void _checkClipboardOperation(String newText) async {
+    try {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      if (clipboardData?.text != null && 
+          clipboardData!.text!.isNotEmpty &&
+          newText.contains(clipboardData.text!)) {
+        // Detected clipboard content in the text, revert
+        widget.controller.text = _previousText;
+        widget.controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: _previousText.length),
+        );
+      }
+    } catch (e) {
+      // Ignore clipboard access errors
+    }
   }
 
   @override
@@ -109,16 +151,7 @@ class _SecureTextFieldState extends State<SecureTextField> {
       autocorrect: false,
       inputFormatters: widget.inputFormatters,
       onTap: widget.onTap,
-      onChanged: (value) {
-        // Prevent paste operations
-        if (value.length > widget.controller.text.length + 1) {
-          // Likely a paste operation, revert to previous value
-          widget.controller.text = widget.controller.text;
-          widget.controller.selection = TextSelection.fromPosition(
-            TextPosition(offset: widget.controller.text.length),
-          );
-        }
-      },
+      onChanged: _handleTextChange,
     );
   }
 }
