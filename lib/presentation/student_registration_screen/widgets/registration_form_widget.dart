@@ -24,8 +24,6 @@ class RegistrationFormWidget extends StatefulWidget {
 
 class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
   bool _isNameValid = false;
-  bool _isEnrollmentValid = false;
-  bool _isConfirmEnrollmentValid = false;
 
   @override
   void initState() {
@@ -35,8 +33,6 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
 
   void _setupListeners() {
     widget.nameController.addListener(_validateName);
-    widget.enrollmentController.addListener(_validateEnrollment);
-    widget.confirmEnrollmentController.addListener(_validateConfirmEnrollment);
   }
 
   void _validateName() {
@@ -45,23 +41,6 @@ class _RegistrationFormWidgetState extends State<RegistrationFormWidget> {
     });
   }
 
-  void _validateEnrollment() {
-    setState(() {
-      final text = widget.enrollmentController.text.trim();
-      _isEnrollmentValid = text.isNotEmpty && 
-          RegExp(r'^[A-Za-z0-9]+$').hasMatch(text) &&
-          text.length >= 6;
-    });
-  }
-
-  void _validateConfirmEnrollment() {
-    setState(() {
-      final enrollment = widget.enrollmentController.text.trim();
-      final confirm = widget.confirmEnrollmentController.text.trim();
-      _isConfirmEnrollmentValid = confirm.isNotEmpty && 
-          enrollment == confirm;
-    });
-  }
 
   String? _validateNameField(String? value) {
     if (value == null || value.trim().isEmpty) {

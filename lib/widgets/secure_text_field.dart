@@ -109,10 +109,6 @@ class _SecureTextFieldState extends State<SecureTextField> {
       autocorrect: false,
       inputFormatters: widget.inputFormatters,
       onTap: widget.onTap,
-      onLongPress: () {
-        // Disable long press to prevent context menu
-        return;
-      },
       onChanged: (value) {
         // Prevent paste operations
         if (value.length > widget.controller.text.length + 1) {
